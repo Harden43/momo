@@ -1270,8 +1270,6 @@ function CustomerApp({ user, orders, setOrders, menu }) {
         {/* Quick Actions */}
         {[
           { Icon: ClipboardList, label: "Order History", action: () => setScreen("tracking") },
-          { Icon: Ticket, label: "My Coupons", action: () => {} },
-          { Icon: Users, label: "Refer a Friend (+100 pts)", action: () => {} },
         ].map((item, i) => (
           <div key={i} onClick={item.action} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: `1px solid ${COLORS.border}`, cursor: "pointer" }}>
             <item.Icon size={20} color={COLORS.textSecondary} />
