@@ -1904,10 +1904,18 @@ export default function App() {
     fetchOrders();
   }, [user, isDashboard, dashboardAuthed]);
 
-  // Real-time subscription for orders
+  // Real-time subscription for orders + fallback polling
   useEffect(() => {
     if (!isDashboard && !user) return;
     if (isDashboard && !dashboardAuthed) return;
+
+    const fetchAll = async () => {
+      const { data } = await supabase
+        .from("orders")
+        .select("*, order_items(*)")
+        .order("created_at", { ascending: false });
+      if (data) setOrders(data.map(normalizeOrder));
+    };
 
     const channel = supabase
       .channel("orders-realtime")
@@ -1930,9 +1938,20 @@ export default function App() {
           o.id === n.id ? { ...o, status: n.status, driverLat: n.driver_lat ? Number(n.driver_lat) : o.driverLat, driverLng: n.driver_lng ? Number(n.driver_lng) : o.driverLng } : o
         ));
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR") {
+          // Realtime failed, polling will handle it
+          console.warn("Realtime subscription error, falling back to polling");
+        }
+      });
 
-    return () => { supabase.removeChannel(channel); };
+    // Fallback: poll every 5 seconds to catch anything realtime misses
+    const pollInterval = setInterval(fetchAll, 5000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(pollInterval);
+    };
   }, [user, isDashboard, dashboardAuthed]);
 
   // --- DASHBOARD MODE ---
