@@ -1,9 +1,30 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "./src/supabaseClient";
+import {
+  UtensilsCrossed, Utensils, Flame, Wind, Droplets, Zap,
+  Clock, CheckCircle, Package, Truck, CircleCheck, XCircle,
+  Phone, User, Users, Star, Home, MapPin, Map, CreditCard, Banknote,
+  Settings, ArrowLeft, ChevronRight, ClipboardList, Ticket, Gift,
+  MessageSquare, Inbox, DollarSign, Plus, Minus, ShoppingCart,
+  LayoutGrid, Leaf, BarChart3, TrendingUp, Navigation, CircleDot,
+} from "lucide-react";
 
 // ============================================================
 // MOMO ORDER - Home Kitchen Ordering Platform
 // ============================================================
+
+// Map menu item category to an icon component
+const CATEGORY_ICON = {
+  steamed: Wind,
+  fried: Flame,
+  jhol: Droplets,
+  c_momo: Zap,
+};
+
+function MenuItemIcon({ category, size = 28, color }) {
+  const Icon = CATEGORY_ICON[category] || UtensilsCrossed;
+  return <Icon size={size} color={color} strokeWidth={1.5} />;
+}
 
 function useIsMobile(breakpoint = 640) {
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < breakpoint);
@@ -45,23 +66,23 @@ const COLORS = {
 // DATA
 // ============================================================
 const CATEGORIES = [
-  { id: "all", label: "All", icon: "🍽️" },
-  { id: "steamed", label: "Steamed", icon: "♨️" },
-  { id: "fried", label: "Fried", icon: "🍳" },
-  { id: "jhol", label: "Jhol", icon: "🍜" },
-  { id: "c_momo", label: "C-Momo", icon: "🌶️" },
+  { id: "all", label: "All", Icon: LayoutGrid },
+  { id: "steamed", label: "Steamed", Icon: Wind },
+  { id: "fried", label: "Fried", Icon: Flame },
+  { id: "jhol", label: "Jhol", Icon: Droplets },
+  { id: "c_momo", label: "C-Momo", Icon: Zap },
 ];
 
 const ORDER_STATUSES = ["pending", "accepted", "cooking", "ready", "delivering", "delivered"];
 
 const STATUS_CONFIG = {
-  pending: { label: "Pending", color: COLORS.warning, bg: COLORS.warningDim, icon: "⏳" },
-  accepted: { label: "Accepted", color: COLORS.accent, bg: COLORS.accentDim, icon: "✅" },
-  cooking: { label: "Cooking", color: COLORS.accent, bg: COLORS.accentDim, icon: "🔥" },
-  ready: { label: "Ready", color: COLORS.success, bg: COLORS.successDim, icon: "📦" },
-  delivering: { label: "Out for Delivery", color: COLORS.success, bg: COLORS.successDim, icon: "🛵" },
-  delivered: { label: "Delivered", color: COLORS.success, bg: COLORS.successDim, icon: "🎉" },
-  cancelled: { label: "Cancelled", color: COLORS.danger, bg: COLORS.dangerDim, icon: "❌" },
+  pending: { label: "Pending", color: COLORS.warning, bg: COLORS.warningDim, Icon: Clock },
+  accepted: { label: "Accepted", color: COLORS.accent, bg: COLORS.accentDim, Icon: CheckCircle },
+  cooking: { label: "Cooking", color: COLORS.accent, bg: COLORS.accentDim, Icon: Flame },
+  ready: { label: "Ready", color: COLORS.success, bg: COLORS.successDim, Icon: Package },
+  delivering: { label: "Out for Delivery", color: COLORS.success, bg: COLORS.successDim, Icon: Truck },
+  delivered: { label: "Delivered", color: COLORS.success, bg: COLORS.successDim, Icon: CircleCheck },
+  cancelled: { label: "Cancelled", color: COLORS.danger, bg: COLORS.dangerDim, Icon: XCircle },
 };
 
 const generateOrderNumber = () => `MOMO-${String(Math.floor(1000 + Math.random() * 9000))}`;
@@ -195,15 +216,15 @@ function AuthView({ onLogin }) {
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.bg, padding: 20 }}>
       <div style={{ width: "100%", maxWidth: 420, textAlign: "center" }}>
-        <div style={{ fontSize: 72, marginBottom: 16, filter: "drop-shadow(0 0 30px rgba(255,107,53,0.3))" }}>🥟</div>
-        <h1 style={{ fontSize: 36, fontWeight: 800, color: COLORS.text, margin: 0, fontFamily: "'Playfair Display', serif", letterSpacing: -1 }}>MomoGhar</h1>
+        <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}><UtensilsCrossed size={56} color={COLORS.accent} strokeWidth={1.5} /></div>
+        <h1 style={{ fontSize: 32, fontWeight: 800, color: COLORS.text, margin: 0, letterSpacing: -0.5 }}>MomoGhar</h1>
         <p style={{ color: COLORS.textSecondary, margin: "8px 0 40px", fontSize: 15, letterSpacing: 0.5 }}>Homemade Nepali Momos • Fresh to Your Door</p>
 
         <div style={{ background: COLORS.card, borderRadius: 20, padding: "28px 20px", border: `1px solid ${COLORS.border}` }}>
           {step === "phone" && (
             <>
               <p style={{ color: COLORS.textSecondary, fontSize: 14, margin: "0 0 20px" }}>Enter your phone number to get started</p>
-              <Input value={phone} onChange={setPhone} placeholder="+16470000000" icon="📱" type="tel" />
+              <Input value={phone} onChange={setPhone} placeholder="+16470000000" icon={<Phone size={16} />} type="tel" />
               <Button onClick={handleSendOTP} fullWidth style={{ marginTop: 16 }} disabled={phone.length < 10}>
                 Send OTP
               </Button>
@@ -214,9 +235,9 @@ function AuthView({ onLogin }) {
               <p style={{ color: COLORS.textSecondary, fontSize: 14, margin: "0 0 12px" }}>Enter the 6-digit code sent to {phone}</p>
 
               {/* Dev mode: show OTP on screen */}
-              <div style={{ margin: "0 0 20px", padding: "10px 16px", background: COLORS.accentDim, border: `1px solid ${COLORS.accent}44`, borderRadius: 10, fontSize: 13 }}>
-                <span style={{ color: COLORS.textSecondary }}>SMS: </span>
-                <span style={{ color: COLORS.text, fontWeight: 700 }}>Your MomoGhar code is <span style={{ color: COLORS.accent, letterSpacing: 2, fontSize: 16 }}>{generatedOtp}</span></span>
+              <div style={{ margin: "0 0 20px", padding: "10px 16px", background: COLORS.accentDim, border: `1px solid ${COLORS.accent}44`, borderRadius: 10, fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
+                <MessageSquare size={14} color={COLORS.textSecondary} />
+                <span style={{ color: COLORS.text, fontWeight: 700 }}>Your code: <span style={{ color: COLORS.accent, letterSpacing: 2, fontSize: 16 }}>{generatedOtp}</span></span>
               </div>
 
               <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 8 }}>
@@ -246,7 +267,7 @@ function AuthView({ onLogin }) {
           {step === "name" && (
             <>
               <p style={{ color: COLORS.textSecondary, fontSize: 14, margin: "0 0 20px" }}>What should we call you?</p>
-              <Input value={name} onChange={setName} placeholder="Your name" icon="👤" />
+              <Input value={name} onChange={setName} placeholder="Your name" icon={<User size={16} />} />
               <Button onClick={handleComplete} fullWidth style={{ marginTop: 16 }} disabled={!name.trim()}>
                 Start Ordering
               </Button>
@@ -330,18 +351,18 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
       {/* Header */}
       <div style={{ padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${COLORS.border}`, position: "sticky", top: 0, background: COLORS.bg, zIndex: 10 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, fontFamily: "'Playfair Display', serif" }}>🥟 MomoGhar</h1>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}><UtensilsCrossed size={20} color={COLORS.accent} strokeWidth={2} /> MomoGhar</h1>
           <p style={{ margin: 0, fontSize: 12, color: COLORS.textMuted }}>Open • Delivery in ~30 min</p>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <Badge color={COLORS.accent} bg={COLORS.accentDim}>⭐ {user.points} pts</Badge>
-          <button onClick={() => setScreen("profile")} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: "50%", width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16 }}>👤</button>
+          <Badge color={COLORS.accent} bg={COLORS.accentDim}><Star size={12} /> {user.points} pts</Badge>
+          <button onClick={() => setScreen("profile")} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: "50%", width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><User size={18} color={COLORS.textSecondary} /></button>
         </div>
       </div>
 
       {/* Hero Banner */}
       <div style={{ margin: "16px 20px", padding: 24, borderRadius: 16, background: `linear-gradient(135deg, ${COLORS.accent}22, ${COLORS.accent}08)`, border: `1px solid ${COLORS.accent}33` }}>
-        <p style={{ margin: 0, fontSize: 13, color: COLORS.accent, fontWeight: 600 }}>🔥 FREE DELIVERY</p>
+        <p style={{ margin: 0, fontSize: 13, color: COLORS.accent, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}><Truck size={14} /> FREE DELIVERY</p>
         <p style={{ margin: "4px 0 0", fontSize: 15, color: COLORS.text }}>On orders over $25 • Use code <strong>MOMO25</strong></p>
       </div>
 
@@ -350,7 +371,7 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
         {CATEGORIES.map(cat => (
           <button key={cat.id} onClick={() => setActiveCategory(cat.id)}
             style={{ padding: "8px 16px", borderRadius: 20, border: activeCategory === cat.id ? `1px solid ${COLORS.accent}` : `1px solid ${COLORS.border}`, background: activeCategory === cat.id ? COLORS.accentDim : "transparent", color: activeCategory === cat.id ? COLORS.accent : COLORS.textSecondary, fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
-            {cat.icon} {cat.label}
+            <cat.Icon size={14} /> {cat.label}
           </button>
         ))}
       </div>
@@ -362,7 +383,7 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
           return (
             <div key={item.id} style={{ background: COLORS.card, borderRadius: 14, border: `1px solid ${COLORS.border}`, overflow: "hidden", opacity: item.isAvailable ? 1 : 0.5, transition: "all 0.2s" }}>
               <div style={{ padding: 16, display: "flex", gap: 14, alignItems: "flex-start" }}>
-                <div style={{ fontSize: 40, lineHeight: 1 }}>{item.image}</div>
+                <div style={{ width: 44, height: 44, borderRadius: 10, background: COLORS.accentDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><MenuItemIcon category={item.category} size={24} color={COLORS.accent} /></div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>{item.name}</h3>
@@ -370,17 +391,17 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
                   </div>
                   <p style={{ margin: "4px 0 0", fontSize: 12, color: COLORS.textSecondary, lineHeight: 1.4 }}>{item.description}</p>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
-                    <span style={{ fontSize: 11, color: COLORS.textMuted }}>⏱ {item.prepTime} min</span>
+                    <span style={{ fontSize: 11, color: COLORS.textMuted, display: "flex", alignItems: "center", gap: 4 }}><Clock size={11} /> {item.prepTime} min</span>
                     {!item.isAvailable ? (
                       <Badge color={COLORS.danger} bg={COLORS.dangerDim}>Sold Out</Badge>
                     ) : inCart ? (
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <button onClick={() => updateQty(item.id, -1)} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${COLORS.border}`, background: COLORS.surface, color: COLORS.text, cursor: "pointer", fontWeight: 700, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                        <button onClick={() => updateQty(item.id, -1)} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${COLORS.border}`, background: COLORS.surface, color: COLORS.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Minus size={14} /></button>
                         <span style={{ fontWeight: 700, fontSize: 14, minWidth: 20, textAlign: "center" }}>{inCart.qty}</span>
-                        <button onClick={() => updateQty(item.id, 1)} style={{ width: 30, height: 30, borderRadius: 8, border: "none", background: COLORS.accent, color: COLORS.white, cursor: "pointer", fontWeight: 700, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                        <button onClick={() => updateQty(item.id, 1)} style={{ width: 30, height: 30, borderRadius: 8, border: "none", background: COLORS.accent, color: COLORS.white, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Plus size={14} /></button>
                       </div>
                     ) : (
-                      <Button size="sm" onClick={() => addToCart(item)}>+ Add</Button>
+                      <Button size="sm" onClick={() => addToCart(item)}><Plus size={14} /> Add</Button>
                     )}
                   </div>
                 </div>
@@ -404,13 +425,13 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
       {/* Active Orders Banner */}
       {activeOrders.length > 0 && (
         <div onClick={() => setScreen("tracking")} style={{ position: "fixed", bottom: cartCount > 0 ? `calc(80px + env(safe-area-inset-bottom, 0px))` : `calc(16px + env(safe-area-inset-bottom, 0px))`, left: 16, right: 16, maxWidth: 600, margin: "0 auto", padding: "12px 20px", background: COLORS.successDim, border: `1px solid ${COLORS.success}44`, borderRadius: 14, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", zIndex: 19 }}>
-          <span style={{ fontSize: 14, color: COLORS.success, fontWeight: 600 }}>📍 {activeOrders.length} Active Order{activeOrders.length > 1 ? "s" : ""}</span>
-          <span style={{ fontSize: 12, color: COLORS.success }}>Track →</span>
+          <span style={{ fontSize: 14, color: COLORS.success, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}><Navigation size={14} /> {activeOrders.length} Active Order{activeOrders.length > 1 ? "s" : ""}</span>
+          <span style={{ fontSize: 12, color: COLORS.success, display: "flex", alignItems: "center", gap: 4 }}>Track <ChevronRight size={14} /></span>
         </div>
       )}
 
       {/* Dashboard Switch */}
-      <button onClick={onSwitchView} style={{ position: "fixed", top: 70, right: 16, background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "8px 12px", cursor: "pointer", color: COLORS.textSecondary, fontSize: 11, fontFamily: "inherit", zIndex: 20 }}>⚙️ Dashboard</button>
+      <button onClick={onSwitchView} style={{ position: "fixed", top: 70, right: 16, background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "8px 12px", cursor: "pointer", color: COLORS.textSecondary, fontSize: 11, fontFamily: "inherit", zIndex: 20, display: "flex", alignItems: "center", gap: 4 }}><Settings size={12} /> Dashboard</button>
     </div>
   );
 
@@ -418,7 +439,7 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
   if (screen === "cart") return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text }}>
       <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, borderBottom: `1px solid ${COLORS.border}`, position: "sticky", top: 0, background: COLORS.bg, zIndex: 10 }}>
-        <button onClick={() => setScreen("menu")} style={{ background: "none", border: "none", color: COLORS.text, cursor: "pointer", fontSize: 20, padding: 0 }}>←</button>
+        <button onClick={() => setScreen("menu")} style={{ background: "none", border: "none", color: COLORS.text, cursor: "pointer", padding: 0, display: "flex" }}><ArrowLeft size={20} /></button>
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Your Cart</h2>
         <Badge>{cart.length} items</Badge>
       </div>
@@ -428,16 +449,16 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
         {cart.map(item => (
           <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 0", borderBottom: `1px solid ${COLORS.border}` }}>
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-              <span style={{ fontSize: 28 }}>{item.image}</span>
+              <div style={{ width: 36, height: 36, borderRadius: 8, background: COLORS.accentDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><MenuItemIcon category={item.category} size={18} color={COLORS.accent} /></div>
               <div>
                 <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{item.name}</p>
                 <p style={{ margin: "2px 0 0", color: COLORS.textMuted, fontSize: 13 }}>${item.price} each</p>
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <button onClick={() => updateQty(item.id, -1)} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${COLORS.border}`, background: COLORS.surface, color: COLORS.text, cursor: "pointer", fontWeight: 700, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+              <button onClick={() => updateQty(item.id, -1)} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${COLORS.border}`, background: COLORS.surface, color: COLORS.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Minus size={14} /></button>
               <span style={{ fontWeight: 700, minWidth: 20, textAlign: "center" }}>{item.qty}</span>
-              <button onClick={() => updateQty(item.id, 1)} style={{ width: 30, height: 30, borderRadius: 8, border: "none", background: COLORS.accent, color: COLORS.white, cursor: "pointer", fontWeight: 700, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+              <button onClick={() => updateQty(item.id, 1)} style={{ width: 30, height: 30, borderRadius: 8, border: "none", background: COLORS.accent, color: COLORS.white, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Plus size={14} /></button>
             </div>
           </div>
         ))}
@@ -451,10 +472,10 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
 
         {/* Delivery Address */}
         <div style={{ marginTop: 16 }}>
-          <label style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary, display: "block", marginBottom: 8 }}>📍 Delivery Address</label>
-          <Input value={deliveryAddress} onChange={setDeliveryAddress} placeholder="Enter your address" icon="🏠" />
+          <label style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary, display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}><MapPin size={13} /> Delivery Address</label>
+          <Input value={deliveryAddress} onChange={setDeliveryAddress} placeholder="Enter your address" icon={<Home size={16} />} />
           <div style={{ marginTop: 8, height: 120, background: COLORS.surface, borderRadius: 10, border: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", justifyContent: "center", color: COLORS.textMuted, fontSize: 13 }}>
-            🗺️ Google Maps pin drop would appear here
+            <Map size={20} color={COLORS.textMuted} /> Map pin drop would appear here
           </div>
         </div>
 
@@ -462,10 +483,10 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
         <div style={{ marginTop: 20 }}>
           <label style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary, display: "block", marginBottom: 8 }}>Payment Method</label>
           <div style={{ display: "flex", gap: 10 }}>
-            {[{ id: "cash", label: "💵 Cash", desc: "Pay on delivery" }, { id: "stripe", label: "💳 Card", desc: "Pay now via Stripe" }].map(pm => (
+            {[{ id: "cash", label: "Cash", desc: "Pay on delivery", Icon: Banknote }, { id: "stripe", label: "Card", desc: "Pay now via Stripe", Icon: CreditCard }].map(pm => (
               <div key={pm.id} onClick={() => setPaymentMethod(pm.id)}
                 style={{ flex: 1, padding: 14, borderRadius: 12, border: `2px solid ${paymentMethod === pm.id ? COLORS.accent : COLORS.border}`, background: paymentMethod === pm.id ? COLORS.accentDim : COLORS.surface, cursor: "pointer", textAlign: "center", transition: "all 0.2s" }}>
-                <p style={{ margin: 0, fontWeight: 700, fontSize: 14 }}>{pm.label}</p>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><pm.Icon size={16} /> {pm.label}</p>
                 <p style={{ margin: "4px 0 0", fontSize: 11, color: COLORS.textMuted }}>{pm.desc}</p>
               </div>
             ))}
@@ -486,10 +507,10 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
             <span style={{ fontWeight: 800, fontSize: 16 }}>Total</span>
             <span style={{ fontWeight: 800, fontSize: 18, color: COLORS.accent }}>${(cartTotal + deliveryFee).toFixed(2)}</span>
           </div>
-          <p style={{ margin: "8px 0 0", fontSize: 12, color: COLORS.success }}>🎁 You'll earn {Math.floor((cartTotal + deliveryFee) * 10)} points with this order!</p>
+          <p style={{ margin: "8px 0 0", fontSize: 12, color: COLORS.success, display: "flex", alignItems: "center", gap: 4 }}><Gift size={12} /> You'll earn {Math.floor((cartTotal + deliveryFee) * 10)} points with this order!</p>
         </div>
 
-        <Button onClick={placeOrder} fullWidth size="lg" style={{ marginTop: 16 }}>Place Order 🥟</Button>
+        <Button onClick={placeOrder} fullWidth size="lg" style={{ marginTop: 16 }}><ShoppingCart size={16} /> Place Order</Button>
       </div>
     </div>
   );
@@ -498,14 +519,14 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
   if (screen === "tracking") return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text }}>
       <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, borderBottom: `1px solid ${COLORS.border}`, position: "sticky", top: 0, background: COLORS.bg, zIndex: 10 }}>
-        <button onClick={() => setScreen("menu")} style={{ background: "none", border: "none", color: COLORS.text, cursor: "pointer", fontSize: 20, padding: 0 }}>←</button>
+        <button onClick={() => setScreen("menu")} style={{ background: "none", border: "none", color: COLORS.text, cursor: "pointer", padding: 0, display: "flex" }}><ArrowLeft size={20} /></button>
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>My Orders</h2>
       </div>
 
       <div style={{ padding: 20, maxWidth: 600, margin: "0 auto" }}>
         {orders.filter(o => o.userId === user.id).length === 0 ? (
           <div style={{ textAlign: "center", padding: 60 }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>📭</div>
+            <div style={{ marginBottom: 12 }}><Inbox size={48} color={COLORS.textMuted} /></div>
             <p style={{ color: COLORS.textSecondary }}>No orders yet. Hungry?</p>
             <Button onClick={() => setScreen("menu")} style={{ marginTop: 12 }}>Browse Menu</Button>
           </div>
@@ -520,7 +541,7 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
                     <span style={{ fontWeight: 700, fontSize: 15 }}>{order.orderNumber}</span>
                     <span style={{ fontSize: 12, color: COLORS.textMuted, marginLeft: 8 }}>{new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
-                  <Badge color={config.color} bg={config.bg}>{config.icon} {config.label}</Badge>
+                  <Badge color={config.color} bg={config.bg}><config.Icon size={12} /> {config.label}</Badge>
                 </div>
 
                 {/* Progress Bar */}
@@ -562,12 +583,12 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
   if (screen === "profile") return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text }}>
       <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, borderBottom: `1px solid ${COLORS.border}` }}>
-        <button onClick={() => setScreen("menu")} style={{ background: "none", border: "none", color: COLORS.text, cursor: "pointer", fontSize: 20, padding: 0 }}>←</button>
+        <button onClick={() => setScreen("menu")} style={{ background: "none", border: "none", color: COLORS.text, cursor: "pointer", padding: 0, display: "flex" }}><ArrowLeft size={20} /></button>
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Profile</h2>
       </div>
       <div style={{ padding: 20, maxWidth: 500, margin: "0 auto" }}>
         <div style={{ textAlign: "center", padding: "32px 0" }}>
-          <div style={{ width: 80, height: 80, borderRadius: "50%", background: COLORS.accentDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, margin: "0 auto 12px" }}>🥟</div>
+          <div style={{ width: 80, height: 80, borderRadius: "50%", background: COLORS.accentDim, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><User size={36} color={COLORS.accent} /></div>
           <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{user.name}</h3>
           <p style={{ margin: "4px 0", color: COLORS.textMuted }}>{user.phone}</p>
         </div>
@@ -579,20 +600,20 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
           <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: 8, height: 6, overflow: "hidden", marginTop: 12 }}>
             <div style={{ background: "white", height: "100%", width: `${Math.min(100, (user.points / 1000) * 100)}%`, borderRadius: 8, transition: "width 0.5s" }} />
           </div>
-          <p style={{ margin: "8px 0 0", fontSize: 12, opacity: 0.7 }}>{Math.max(0, 1000 - user.points)} more for a Free Platter! 🎉</p>
+          <p style={{ margin: "8px 0 0", fontSize: 12, opacity: 0.7 }}>{Math.max(0, 1000 - user.points)} more for a Free Platter!</p>
         </div>
 
         {/* Quick Actions */}
         {[
-          { icon: "📋", label: "Order History", action: () => setScreen("tracking") },
-          { icon: "📍", label: "Saved Addresses", action: () => {} },
-          { icon: "🎟️", label: "My Coupons", action: () => {} },
-          { icon: "👥", label: "Refer a Friend (+100 pts)", action: () => {} },
+          { Icon: ClipboardList, label: "Order History", action: () => setScreen("tracking") },
+          { Icon: MapPin, label: "Saved Addresses", action: () => {} },
+          { Icon: Ticket, label: "My Coupons", action: () => {} },
+          { Icon: Users, label: "Refer a Friend (+100 pts)", action: () => {} },
         ].map((item, i) => (
           <div key={i} onClick={item.action} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: `1px solid ${COLORS.border}`, cursor: "pointer" }}>
-            <span style={{ fontSize: 20 }}>{item.icon}</span>
+            <item.Icon size={20} color={COLORS.textSecondary} />
             <span style={{ flex: 1, fontSize: 14 }}>{item.label}</span>
-            <span style={{ color: COLORS.textMuted }}>→</span>
+            <ChevronRight size={16} color={COLORS.textMuted} />
           </div>
         ))}
 
@@ -647,7 +668,7 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onSwitchView }) {
             <span style={{ fontWeight: 800, fontSize: 16 }}>{order.orderNumber}</span>
             <span style={{ fontSize: 12, color: COLORS.textMuted, marginLeft: 10 }}>{order.userName}</span>
           </div>
-          <Badge color={config.color} bg={config.bg}>{config.icon} {config.label}</Badge>
+          <Badge color={config.color} bg={config.bg}><config.Icon size={12} /> {config.label}</Badge>
         </div>
 
         {order.items.map((item, i) => (
@@ -657,15 +678,15 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onSwitchView }) {
         ))}
 
         {order.specialInstructions && (
-          <div style={{ marginTop: 8, padding: "8px 12px", background: COLORS.warningDim, borderRadius: 8, fontSize: 12, color: COLORS.warning }}>
-            📝 {order.specialInstructions}
+          <div style={{ marginTop: 8, padding: "8px 12px", background: COLORS.warningDim, borderRadius: 8, fontSize: 12, color: COLORS.warning, display: "flex", alignItems: "center", gap: 6 }}>
+            <MessageSquare size={12} /> {order.specialInstructions}
           </div>
         )}
 
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 10, borderTop: `1px solid ${COLORS.border}`, gap: 8 }}>
           <div>
             <span style={{ fontWeight: 800, color: COLORS.accent, fontSize: 16 }}>${order.total.toFixed(2)}</span>
-            <span style={{ fontSize: 11, color: COLORS.textMuted, marginLeft: 8 }}>{order.paymentMethod === "cash" ? "💵 Cash" : "💳 Paid"}</span>
+            <span style={{ fontSize: 11, color: COLORS.textMuted, marginLeft: 8, display: "inline-flex", alignItems: "center", gap: 4 }}>{order.paymentMethod === "cash" ? <><Banknote size={11} /> Cash</> : <><CreditCard size={11} /> Paid</>}</span>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {order.status === "pending" && (
@@ -673,17 +694,17 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onSwitchView }) {
             )}
             {nextStatus && nextStatus !== "delivered" && (
               <Button size="sm" onClick={() => updateOrderStatus(order.id, nextStatus)}>
-                {nextConfig.icon} {nextStatus === "accepted" ? "Accept" : nextStatus === "cooking" ? "Start Cooking" : nextStatus === "ready" ? "Mark Ready" : nextStatus === "delivering" ? "Out for Delivery" : nextStatus}
+                <nextConfig.Icon size={14} /> {nextStatus === "accepted" ? "Accept" : nextStatus === "cooking" ? "Start Cooking" : nextStatus === "ready" ? "Mark Ready" : nextStatus === "delivering" ? "Out for Delivery" : nextStatus}
               </Button>
             )}
             {order.status === "delivering" && (
-              <Button variant="success" size="sm" onClick={() => updateOrderStatus(order.id, "delivered")}>🎉 Mark Delivered</Button>
+              <Button variant="success" size="sm" onClick={() => updateOrderStatus(order.id, "delivered")}><CircleCheck size={14} /> Delivered</Button>
             )}
           </div>
         </div>
 
-        <div style={{ marginTop: 8, fontSize: 11, color: COLORS.textMuted }}>
-          📍 {order.deliveryAddress} • {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        <div style={{ marginTop: 8, fontSize: 11, color: COLORS.textMuted, display: "flex", alignItems: "center", gap: 4 }}>
+          <MapPin size={11} /> {order.deliveryAddress} • {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </div>
       </div>
     );
@@ -694,27 +715,27 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onSwitchView }) {
       {/* Dashboard Header */}
       <div style={{ padding: isMobile ? "12px 16px" : "14px 24px", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8, borderBottom: `1px solid ${COLORS.border}`, background: COLORS.surface }}>
         <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 14, flexWrap: "wrap" }}>
-          <h1 style={{ margin: 0, fontSize: isMobile ? 16 : 20, fontWeight: 800, fontFamily: "'Playfair Display', serif" }}>🥟 Kitchen</h1>
+          <h1 style={{ margin: 0, fontSize: isMobile ? 16 : 20, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}><UtensilsCrossed size={isMobile ? 16 : 20} color={COLORS.accent} strokeWidth={2} /> Kitchen</h1>
           <div onClick={() => setIsOpen(!isOpen)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 20, background: isOpen ? COLORS.successDim : COLORS.dangerDim, border: `1px solid ${isOpen ? COLORS.success : COLORS.danger}44`, cursor: "pointer" }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: isOpen ? COLORS.success : COLORS.danger }} />
             <span style={{ fontSize: 11, fontWeight: 600, color: isOpen ? COLORS.success : COLORS.danger }}>{isOpen ? "Open" : "Closed"}</span>
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={onSwitchView}>← Customer</Button>
+        <Button variant="ghost" size="sm" onClick={onSwitchView}><ArrowLeft size={14} /> Customer</Button>
       </div>
 
       {/* Stats Bar */}
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? 8 : 12, padding: isMobile ? "12px 16px" : "16px 24px" }}>
         {[
-          { label: "Pending", value: pendingOrders.length, color: COLORS.warning, icon: "⏳" },
-          { label: "Active", value: activeOrders.length, color: COLORS.accent, icon: "🔥" },
-          { label: "Delivering", value: deliveringOrders.length, color: COLORS.success, icon: "🛵" },
-          { label: "Sales", value: `$${totalSales.toFixed(0)}`, color: COLORS.success, icon: "💰" },
+          { label: "Pending", value: pendingOrders.length, color: COLORS.warning, Icon: Clock },
+          { label: "Active", value: activeOrders.length, color: COLORS.accent, Icon: Flame },
+          { label: "Delivering", value: deliveringOrders.length, color: COLORS.success, Icon: Truck },
+          { label: "Sales", value: `$${totalSales.toFixed(0)}`, color: COLORS.success, Icon: DollarSign },
         ].map((stat, i) => (
           <div key={i} style={{ background: COLORS.card, borderRadius: 12, padding: isMobile ? 12 : 16, border: `1px solid ${COLORS.border}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: 11, color: COLORS.textMuted }}>{stat.label}</span>
-              <span>{stat.icon}</span>
+              <stat.Icon size={16} color={stat.color} />
             </div>
             <p style={{ margin: "4px 0 0", fontSize: isMobile ? 20 : 24, fontWeight: 800, color: stat.color }}>{stat.value}</p>
           </div>
@@ -742,7 +763,7 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onSwitchView }) {
             {/* Pending Column */}
             <div>
               <h3 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 700, color: COLORS.warning, display: "flex", alignItems: "center", gap: 8 }}>
-                ⏳ New Orders <span style={{ background: COLORS.warningDim, borderRadius: 10, padding: "2px 10px", fontSize: 12 }}>{pendingOrders.length}</span>
+                <Clock size={14} /> New Orders <span style={{ background: COLORS.warningDim, borderRadius: 10, padding: "2px 10px", fontSize: 12 }}>{pendingOrders.length}</span>
               </h3>
               {pendingOrders.length === 0 && <p style={{ color: COLORS.textMuted, fontSize: 14, textAlign: "center", padding: 40 }}>No pending orders</p>}
               {pendingOrders.map(o => <OrderCard key={o.id} order={o} />)}
@@ -751,7 +772,7 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onSwitchView }) {
             {/* Active Column */}
             <div>
               <h3 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 700, color: COLORS.accent, display: "flex", alignItems: "center", gap: 8 }}>
-                🔥 In Progress <span style={{ background: COLORS.accentDim, borderRadius: 10, padding: "2px 10px", fontSize: 12 }}>{activeOrders.length + deliveringOrders.length}</span>
+                <Flame size={14} /> In Progress <span style={{ background: COLORS.accentDim, borderRadius: 10, padding: "2px 10px", fontSize: 12 }}>{activeOrders.length + deliveringOrders.length}</span>
               </h3>
               {[...activeOrders, ...deliveringOrders].length === 0 && <p style={{ color: COLORS.textMuted, fontSize: 14, textAlign: "center", padding: 40 }}>No active orders</p>}
               {[...activeOrders, ...deliveringOrders].map(o => <OrderCard key={o.id} order={o} />)}
@@ -763,11 +784,11 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onSwitchView }) {
           <div style={{ maxWidth: 700 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Menu Items</h3>
-              <Button size="sm">+ Add Item</Button>
+              <Button size="sm"><Plus size={14} /> Add Item</Button>
             </div>
             {menu.map(item => (
               <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: `1px solid ${COLORS.border}` }}>
-                <span style={{ fontSize: 28 }}>{item.image}</span>
+                <div style={{ width: 36, height: 36, borderRadius: 8, background: COLORS.accentDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><MenuItemIcon category={item.category} size={18} color={COLORS.accent} /></div>
                 <div style={{ flex: 1 }}>
                   <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{item.name}</p>
                   <p style={{ margin: "2px 0", fontSize: 12, color: COLORS.textMuted }}>${item.price} • {item.category}</p>
@@ -798,7 +819,7 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onSwitchView }) {
               </div>
               <div style={{ background: COLORS.card, borderRadius: 14, padding: 20, border: `1px solid ${COLORS.border}` }}>
                 <p style={{ margin: 0, fontSize: 12, color: COLORS.textMuted }}>Most Popular</p>
-                <p style={{ margin: "8px 0 0", fontSize: 18, fontWeight: 800, color: COLORS.text }}>🥟 Jhol Momo</p>
+                <p style={{ margin: "8px 0 0", fontSize: 18, fontWeight: 800, color: COLORS.text }}>Jhol Momo</p>
               </div>
             </div>
 
