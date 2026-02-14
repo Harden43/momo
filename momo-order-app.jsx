@@ -8,7 +8,7 @@ import {
   Phone, User, Users, Star, Home, MapPin, Map, CreditCard, Banknote,
   Settings, ArrowLeft, ChevronRight, ClipboardList, Ticket, Gift,
   MessageSquare, Inbox, DollarSign, Plus, Minus, ShoppingCart,
-  LayoutGrid, Leaf, BarChart3, TrendingUp, CircleDot, Camera,
+  LayoutGrid, Leaf, BarChart3, TrendingUp, CircleDot, Camera, Navigation,
 } from "lucide-react";
 
 // ============================================================
@@ -67,6 +67,14 @@ const COLORS = {
   textMuted: "#555555",
   white: "#FFFFFF",
 };
+
+// Inject driver pulse animation
+if (!document.getElementById("momoghar-styles")) {
+  const s = document.createElement("style");
+  s.id = "momoghar-styles";
+  s.textContent = `@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(59,130,246,0.5)}70%{box-shadow:0 0 0 12px rgba(59,130,246,0)}}`;
+  document.head.appendChild(s);
+}
 
 // ============================================================
 // DATA
@@ -616,14 +624,21 @@ const KITCHEN_LOCATION = { lat: 43.6532, lng: -79.3832 };
 function OrderTrackingMap({ order }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const driverMarkerRef = useRef(null);
+  const routeLineRef = useRef(null);
   const [eta, setEta] = useState(null);
   const [routeDistance, setRouteDistance] = useState(null);
+  const [driverLive, setDriverLive] = useState(false);
+  const etaFetchRef = useRef(null);
 
+  // Initialize map once
   useEffect(() => {
     if (!mapRef.current || !order.lat || !order.lng) return;
     if (mapInstanceRef.current) {
       mapInstanceRef.current.remove();
       mapInstanceRef.current = null;
+      driverMarkerRef.current = null;
+      routeLineRef.current = null;
     }
 
     const map = L.map(mapRef.current, {
@@ -644,8 +659,8 @@ function OrderTrackingMap({ order }) {
       iconAnchor: [18, 36],
     });
 
-    // Delivery marker (green)
-    const deliveryIcon = L.divIcon({
+    // Customer marker (green)
+    const customerIcon = L.divIcon({
       className: "",
       html: `<div style="width:36px;height:36px;background:${COLORS.success};border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid ${COLORS.white};box-shadow:0 2px 8px rgba(0,0,0,0.5)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></div>`,
       iconSize: [36, 36],
@@ -653,7 +668,7 @@ function OrderTrackingMap({ order }) {
     });
 
     L.marker([KITCHEN_LOCATION.lat, KITCHEN_LOCATION.lng], { icon: kitchenIcon }).addTo(map);
-    L.marker([order.lat, order.lng], { icon: deliveryIcon }).addTo(map);
+    L.marker([order.lat, order.lng], { icon: customerIcon }).addTo(map);
 
     const bounds = L.latLngBounds(
       [KITCHEN_LOCATION.lat, KITCHEN_LOCATION.lng],
@@ -661,14 +676,14 @@ function OrderTrackingMap({ order }) {
     );
     map.fitBounds(bounds, { padding: [60, 60] });
 
-    // Fetch driving route from OSRM
+    // Fetch initial driving route (kitchen → customer)
     fetch(`https://router.project-osrm.org/route/v1/driving/${KITCHEN_LOCATION.lng},${KITCHEN_LOCATION.lat};${order.lng},${order.lat}?overview=full&geometries=geojson`)
       .then(res => res.json())
       .then(data => {
         if (data.routes && data.routes[0]) {
           const route = data.routes[0];
           const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
-          L.polyline(coords, {
+          routeLineRef.current = L.polyline(coords, {
             color: COLORS.accent,
             weight: 4,
             opacity: 0.85,
@@ -686,9 +701,67 @@ function OrderTrackingMap({ order }) {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
+        driverMarkerRef.current = null;
+        routeLineRef.current = null;
       }
     };
   }, [order.id, order.lat, order.lng, order.status]);
+
+  // Update driver marker when driverLat/driverLng changes
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !order.driverLat || !order.driverLng) {
+      if (driverMarkerRef.current) {
+        driverMarkerRef.current.remove();
+        driverMarkerRef.current = null;
+      }
+      setDriverLive(false);
+      return;
+    }
+
+    setDriverLive(true);
+    const driverIcon = L.divIcon({
+      className: "",
+      html: `<div style="width:40px;height:40px;background:#3B82F6;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid ${COLORS.white};box-shadow:0 2px 12px rgba(59,130,246,0.6);animation:pulse 2s infinite"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 12 16 16"/><circle cx="5.5" cy="18" r="2"/><circle cx="18.5" cy="18" r="2"/></svg></div>`,
+      iconSize: [40, 40],
+      iconAnchor: [20, 40],
+    });
+
+    if (driverMarkerRef.current) {
+      driverMarkerRef.current.setLatLng([order.driverLat, order.driverLng]);
+    } else {
+      driverMarkerRef.current = L.marker([order.driverLat, order.driverLng], { icon: driverIcon, zIndexOffset: 1000 }).addTo(map);
+    }
+
+    // Update route line from driver to customer and recalculate ETA
+    clearTimeout(etaFetchRef.current);
+    etaFetchRef.current = setTimeout(() => {
+      fetch(`https://router.project-osrm.org/route/v1/driving/${order.driverLng},${order.driverLat};${order.lng},${order.lat}?overview=full&geometries=geojson`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.routes && data.routes[0]) {
+            const route = data.routes[0];
+            const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+            if (routeLineRef.current) routeLineRef.current.remove();
+            routeLineRef.current = L.polyline(coords, {
+              color: "#3B82F6",
+              weight: 4,
+              opacity: 0.9,
+            }).addTo(map);
+            setEta(Math.round(route.duration / 60));
+            setRouteDistance((route.distance / 1000).toFixed(1));
+          }
+        })
+        .catch(() => {});
+    }, 1000);
+
+    // Fit bounds to include driver
+    const bounds = L.latLngBounds(
+      [order.driverLat, order.driverLng],
+      [order.lat, order.lng]
+    );
+    map.fitBounds(bounds, { padding: [60, 60], animate: true });
+  }, [order.driverLat, order.driverLng]);
 
   if (!order.lat || !order.lng) return null;
 
@@ -699,7 +772,7 @@ function OrderTrackingMap({ order }) {
       case "accepted": return { time: drive + 20, label: "Preparing your order" };
       case "cooking": return { time: drive + 12, label: "Cooking your momos" };
       case "ready": return { time: drive + 3, label: "Ready for pickup" };
-      case "delivering": return { time: drive, label: "Arriving in" };
+      case "delivering": return { time: driverLive ? drive : drive, label: driverLive ? "Driver arriving in" : "Arriving in" };
       default: return null;
     }
   };
@@ -754,6 +827,11 @@ function OrderTrackingMap({ order }) {
         <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: COLORS.textSecondary }}>
           <div style={{ width: 10, height: 10, borderRadius: "50%", background: COLORS.accent }} /> Kitchen
         </div>
+        {driverLive && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: COLORS.textSecondary }}>
+            <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#3B82F6" }} /> Driver
+          </div>
+        )}
         <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: COLORS.textSecondary }}>
           <div style={{ width: 10, height: 10, borderRadius: "50%", background: COLORS.success }} /> You
         </div>
@@ -1341,6 +1419,33 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onLogout }) {
   const [tab, setTab] = useState("orders"); // orders | menu | analytics
   const [isOpen, setIsOpen] = useState(true);
   const audioRef = useRef(null);
+  const [trackingOrderId, setTrackingOrderId] = useState(null);
+  const watchIdRef = useRef(null);
+
+  const startTracking = (orderId) => {
+    if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
+    setTrackingOrderId(orderId);
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        supabase.from("orders").update({ driver_lat: pos.coords.latitude, driver_lng: pos.coords.longitude }).eq("id", orderId).then();
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }
+    );
+  };
+
+  const stopTracking = (orderId) => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    setTrackingOrderId(null);
+    supabase.from("orders").update({ driver_lat: null, driver_lng: null }).eq("id", orderId).then();
+  };
+
+  useEffect(() => {
+    return () => { if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current); };
+  }, []);
 
   const pendingOrders = orders.filter(o => o.status === "pending");
   const activeOrders = orders.filter(o => ["accepted", "cooking", "ready"].includes(o.status));
@@ -1408,7 +1513,14 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onLogout }) {
               </Button>
             )}
             {order.status === "delivering" && (
-              <Button variant="success" size="sm" onClick={() => updateOrderStatus(order.id, "delivered")}><CircleCheck size={14} /> Delivered</Button>
+              <>
+                {trackingOrderId === order.id ? (
+                  <Button variant="secondary" size="sm" onClick={() => stopTracking(order.id)}><Navigation size={14} /> Stop Tracking</Button>
+                ) : (
+                  <Button size="sm" style={{ background: COLORS.success, color: COLORS.white }} onClick={() => startTracking(order.id)}><Navigation size={14} /> Go Live</Button>
+                )}
+                <Button variant="success" size="sm" onClick={() => { stopTracking(order.id); updateOrderStatus(order.id, "delivered"); }}><CircleCheck size={14} /> Delivered</Button>
+              </>
             )}
           </div>
         </div>
@@ -1572,6 +1684,8 @@ function normalizeOrder(row) {
     deliveryAddress: row.delivery_address,
     lat: row.lat ? Number(row.lat) : null,
     lng: row.lng ? Number(row.lng) : null,
+    driverLat: row.driver_lat ? Number(row.driver_lat) : null,
+    driverLng: row.driver_lng ? Number(row.driver_lng) : null,
     createdAt: row.created_at,
   };
 }
@@ -1659,8 +1773,9 @@ export default function App() {
         }
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders" }, (payload) => {
+        const n = payload.new;
         setOrders(prev => prev.map(o =>
-          o.id === payload.new.id ? { ...o, status: payload.new.status } : o
+          o.id === n.id ? { ...o, status: n.status, driverLat: n.driver_lat ? Number(n.driver_lat) : o.driverLat, driverLng: n.driver_lng ? Number(n.driver_lng) : o.driverLng } : o
         ));
       })
       .subscribe();
