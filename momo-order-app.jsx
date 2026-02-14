@@ -887,6 +887,12 @@ function CustomerApp({ user, orders, setOrders, menu }) {
       setOrders(prev => [normalizeOrder(fullOrder), ...prev]);
     }
 
+    // Award points: 10 points per dollar spent
+    const earned = Math.floor((cartTotal + deliveryFee) * 10);
+    const updated = { ...user, points: (user.points || 0) + earned };
+    localStorage.setItem("momoghar_user", JSON.stringify(updated));
+    Object.assign(user, updated);
+
     setCart([]);
     setSpecialInstructions("");
     setOrderLoading(false);
