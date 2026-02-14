@@ -8,7 +8,7 @@ import {
   Phone, User, Users, Star, Home, MapPin, Map, CreditCard, Banknote,
   Settings, ArrowLeft, ChevronRight, ClipboardList, Ticket, Gift,
   MessageSquare, Inbox, DollarSign, Plus, Minus, ShoppingCart,
-  LayoutGrid, Leaf, BarChart3, TrendingUp, CircleDot,
+  LayoutGrid, Leaf, BarChart3, TrendingUp, CircleDot, Camera,
 } from "lucide-react";
 
 // ============================================================
@@ -1188,7 +1188,42 @@ function CustomerApp({ user, orders, setOrders, menu }) {
       </div>
       <div style={{ padding: 20, maxWidth: 500, margin: "0 auto" }}>
         <div style={{ textAlign: "center", padding: "32px 0" }}>
-          <div style={{ width: 80, height: 80, borderRadius: "50%", background: COLORS.accentDim, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><User size={36} color={COLORS.accent} /></div>
+          <div style={{ position: "relative", width: 80, height: 80, margin: "0 auto 12px", cursor: "pointer" }} onClick={() => document.getElementById("avatar-input").click()}>
+            {user.avatar ? (
+              <img src={user.avatar} alt="" style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover" }} />
+            ) : (
+              <div style={{ width: 80, height: 80, borderRadius: "50%", background: COLORS.accentDim, display: "flex", alignItems: "center", justifyContent: "center" }}><User size={36} color={COLORS.accent} /></div>
+            )}
+            <div style={{ position: "absolute", bottom: 0, right: 0, width: 26, height: 26, borderRadius: "50%", background: COLORS.accent, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${COLORS.bg}` }}>
+              <Camera size={12} color={COLORS.bg} />
+            </div>
+            <input id="avatar-input" type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = () => {
+                const img = new Image();
+                img.onload = () => {
+                  const canvas = document.createElement("canvas");
+                  const size = 200;
+                  canvas.width = size;
+                  canvas.height = size;
+                  const ctx = canvas.getContext("2d");
+                  const min = Math.min(img.width, img.height);
+                  const sx = (img.width - min) / 2;
+                  const sy = (img.height - min) / 2;
+                  ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
+                  const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+                  const updated = { ...user, avatar: dataUrl };
+                  localStorage.setItem("momoghar_user", JSON.stringify(updated));
+                  window.location.reload();
+                };
+                img.src = reader.result;
+              };
+              reader.readAsDataURL(file);
+              e.target.value = "";
+            }} />
+          </div>
           <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>{user.name}</h3>
           <p style={{ margin: "4px 0", color: COLORS.textMuted }}>{user.phone}</p>
         </div>
