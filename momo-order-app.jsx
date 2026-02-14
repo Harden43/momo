@@ -2099,11 +2099,22 @@ export default function App() {
     return () => window.removeEventListener("hashchange", handler);
   }, []);
 
-  // Restore user from localStorage on mount (customer only)
+  // Restore user from localStorage, then sync latest from Supabase
   useEffect(() => {
     if (isDashboard) return;
     const saved = localStorage.getItem("momoghar_user");
-    if (saved) setUser(JSON.parse(saved));
+    if (saved) {
+      const local = JSON.parse(saved);
+      setUser(local);
+      // Fetch latest from Supabase to sync cross-device changes
+      supabase.from("users").select("*").eq("id", local.id).single().then(({ data }) => {
+        if (data) {
+          const synced = { ...local, name: data.name, phone: data.phone, points: data.points || local.points || 0, avatar: data.avatar || local.avatar || null, address: data.address || local.address || "", addressLat: data.address_lat || local.addressLat || null, addressLng: data.address_lng || local.addressLng || null };
+          localStorage.setItem("momoghar_user", JSON.stringify(synced));
+          setUser(synced);
+        }
+      });
+    }
   }, [isDashboard]);
 
   // Load store status + poll
