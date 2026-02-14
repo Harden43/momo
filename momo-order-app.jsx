@@ -101,47 +101,61 @@ function AuthView({ onLogin }) {
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
   const [step, setStep] = useState("phone"); // phone | otp | name
   const [name, setName] = useState("");
+  const [generatedOtp, setGeneratedOtp] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const inputRefs = Array.from({ length: OTP_LENGTH }, () => useRef(null));
 
-  const handleSendOTP = async () => {
+  // Dev helper: derive a Supabase email+password from the phone number
+  const phoneToEmail = (p) => `${p.replace(/[^0-9]/g, "")}@momoghar.app`;
+  const phoneToPassword = (p) => `momo-${p.replace(/[^0-9]/g, "")}`;
+
+  const handleSendOTP = () => {
     if (phone.length < 10) return;
-    setLoading(true);
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    setGeneratedOtp(code);
+    setOtp(Array(OTP_LENGTH).fill(""));
     setError("");
-    const { error: otpError } = await supabase.auth.signInWithOtp({ phone });
-    setLoading(false);
-    if (otpError) {
-      setError(otpError.message);
-    } else {
-      setOtp(Array(OTP_LENGTH).fill(""));
-      setStep("otp");
-    }
+    setStep("otp");
   };
 
   const handleVerify = async () => {
     const token = otp.join("");
     if (token.length < OTP_LENGTH) return;
-    setLoading(true);
-    setError("");
-    const { data, error: verifyError } = await supabase.auth.verifyOtp({ phone, token, type: "sms" });
-    setLoading(false);
-    if (verifyError) {
-      setError(verifyError.message);
+
+    if (token !== generatedOtp) {
+      setError("Incorrect code. Please try again.");
       setOtp(Array(OTP_LENGTH).fill(""));
       inputRefs[0].current?.focus();
+      return;
+    }
+
+    // OTP matched — sign into Supabase with phone-derived credentials
+    setLoading(true);
+    setError("");
+    const email = phoneToEmail(phone);
+    const password = phoneToPassword(phone);
+
+    // Try sign in first, fall back to sign up for new users
+    let { data, error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+    if (signInErr) {
+      const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({ email, password });
+      if (signUpErr) { setError(signUpErr.message); setLoading(false); return; }
+      data = signUpData;
+    }
+
+    // Check if profile exists
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("name")
+      .eq("id", data.user.id)
+      .single();
+    setLoading(false);
+
+    if (profile?.name) {
+      onLogin();
     } else {
-      // Check if profile already exists
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("name")
-        .eq("id", data.user.id)
-        .single();
-      if (profile?.name) {
-        onLogin();
-      } else {
-        setStep("name");
-      }
+      setStep("name");
     }
   };
 
@@ -202,14 +216,20 @@ function AuthView({ onLogin }) {
             <>
               <p style={{ color: COLORS.textSecondary, fontSize: 14, margin: "0 0 20px" }}>Enter your phone number to get started</p>
               <Input value={phone} onChange={setPhone} placeholder="+16470000000" icon="📱" type="tel" />
-              <Button onClick={handleSendOTP} fullWidth style={{ marginTop: 16 }} disabled={phone.length < 10 || loading}>
-                {loading ? "Sending..." : "Send OTP"}
+              <Button onClick={handleSendOTP} fullWidth style={{ marginTop: 16 }} disabled={phone.length < 10}>
+                Send OTP
               </Button>
             </>
           )}
           {step === "otp" && (
             <>
               <p style={{ color: COLORS.textSecondary, fontSize: 14, margin: "0 0 12px" }}>Enter the 6-digit code sent to {phone}</p>
+
+              {/* Dev mode: show OTP on screen */}
+              <div style={{ margin: "0 0 20px", padding: "10px 16px", background: COLORS.accentDim, border: `1px solid ${COLORS.accent}44`, borderRadius: 10, fontSize: 13 }}>
+                <span style={{ color: COLORS.textSecondary }}>SMS: </span>
+                <span style={{ color: COLORS.text, fontWeight: 700 }}>Your MomoGhar code is <span style={{ color: COLORS.accent, letterSpacing: 2, fontSize: 16 }}>{generatedOtp}</span></span>
+              </div>
 
               <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 8 }}>
                 {Array.from({ length: OTP_LENGTH }, (_, i) => (
@@ -245,8 +265,6 @@ function AuthView({ onLogin }) {
             </>
           )}
         </div>
-
-        {error && step === "phone" && <p style={{ color: COLORS.danger, fontSize: 12, marginTop: 16 }}>{error}</p>}
       </div>
     </div>
   );
