@@ -177,7 +177,7 @@ function AuthView({ onLogin }) {
     setStep("otp");
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     const token = otp.join("");
     if (token.length < OTP_LENGTH) return;
 
@@ -188,7 +188,16 @@ function AuthView({ onLogin }) {
       return;
     }
 
-    // Check localStorage for existing user with this phone
+    // Check Supabase for existing user by phone
+    const { data: existing } = await supabase.from("users").select("*").eq("phone", phone).single();
+    if (existing) {
+      const userData = { id: existing.id, name: existing.name, phone: existing.phone, points: existing.points || 0, avatar: existing.avatar || null, address: existing.address || "", addressLat: existing.address_lat || null, addressLng: existing.address_lng || null };
+      localStorage.setItem("momoghar_user", JSON.stringify(userData));
+      onLogin(userData);
+      return;
+    }
+
+    // Fallback: check localStorage
     const saved = localStorage.getItem("momoghar_user");
     if (saved) {
       const parsed = JSON.parse(saved);
@@ -227,7 +236,7 @@ function AuthView({ onLogin }) {
     }
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (!name.trim()) return;
     const userData = {
       id: crypto.randomUUID(),
@@ -235,6 +244,8 @@ function AuthView({ onLogin }) {
       phone,
       points: 0,
     };
+    // Save to Supabase
+    await supabase.from("users").insert({ id: userData.id, name: userData.name, phone: userData.phone, points: 0 });
     localStorage.setItem("momoghar_user", JSON.stringify(userData));
     onLogin(userData);
   };
@@ -926,6 +937,7 @@ function CustomerApp({ user, orders, setOrders, menu, storeOpen }) {
   const saveUserAddress = (addr, lat, lng) => {
     const updated = { ...user, address: addr, addressLat: lat, addressLng: lng };
     localStorage.setItem("momoghar_user", JSON.stringify(updated));
+    supabase.from("users").update({ address: addr, address_lat: lat, address_lng: lng }).eq("id", user.id).then();
   };
 
   const filteredItems = menu.filter(i => activeCategory === "all" || i.category === activeCategory);
@@ -983,9 +995,11 @@ function CustomerApp({ user, orders, setOrders, menu, storeOpen }) {
 
     // Award points: 10 points per dollar spent
     const earned = Math.floor((cartTotal + deliveryFee) * 10);
-    const updated = { ...user, points: (user.points || 0) + earned };
+    const newPoints = (user.points || 0) + earned;
+    const updated = { ...user, points: newPoints };
     localStorage.setItem("momoghar_user", JSON.stringify(updated));
     Object.assign(user, updated);
+    supabase.from("users").update({ points: newPoints }).eq("id", user.id).then();
 
     setCart([]);
     setSpecialInstructions("");
@@ -1326,6 +1340,7 @@ function CustomerApp({ user, orders, setOrders, menu, storeOpen }) {
                   const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
                   const updated = { ...user, avatar: dataUrl };
                   localStorage.setItem("momoghar_user", JSON.stringify(updated));
+                  supabase.from("users").update({ avatar: dataUrl }).eq("id", user.id).then();
                   window.location.reload();
                 };
                 img.src = reader.result;
