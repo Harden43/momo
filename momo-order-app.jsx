@@ -76,6 +76,22 @@ if (!document.getElementById("momoghar-styles")) {
   document.head.appendChild(s);
 }
 
+// Smooth marker animation helper
+function animateMarker(marker, targetLat, targetLng, duration = 1000) {
+  const start = marker.getLatLng();
+  const startTime = performance.now();
+  const dLat = targetLat - start.lat;
+  const dLng = targetLng - start.lng;
+  if (Math.abs(dLat) < 0.000001 && Math.abs(dLng) < 0.000001) return;
+  const step = (now) => {
+    const t = Math.min((now - startTime) / duration, 1);
+    const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // ease in-out
+    marker.setLatLng([start.lat + dLat * ease, start.lng + dLng * ease]);
+    if (t < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
 // ============================================================
 // DATA
 // ============================================================
@@ -728,7 +744,7 @@ function OrderTrackingMap({ order }) {
     });
 
     if (driverMarkerRef.current) {
-      driverMarkerRef.current.setLatLng([order.driverLat, order.driverLng]);
+      animateMarker(driverMarkerRef.current, order.driverLat, order.driverLng);
     } else {
       driverMarkerRef.current = L.marker([order.driverLat, order.driverLng], { icon: driverIcon, zIndexOffset: 1000 }).addTo(map);
     }
@@ -1463,14 +1479,14 @@ function DriverNavMap({ order, onDelivered, onClose }) {
         });
 
         if (driverMarkerRef.current) {
-          driverMarkerRef.current.setLatLng([lat, lng]);
+          animateMarker(driverMarkerRef.current, lat, lng);
         } else {
           driverMarkerRef.current = L.marker([lat, lng], { icon: driverIcon, zIndexOffset: 1000 }).addTo(map);
         }
 
-        // Fit bounds
+        // Fit bounds (smooth pan)
         const bounds = L.latLngBounds([lat, lng], [order.lat, order.lng]);
-        map.fitBounds(bounds, { padding: [80, 80], animate: true });
+        map.fitBounds(bounds, { padding: [80, 80], animate: true, duration: 1 });
 
         // Fetch route + ETA (throttled)
         clearTimeout(etaTimeout.current);
