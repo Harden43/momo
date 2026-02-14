@@ -101,49 +101,40 @@ function AuthView({ onLogin }) {
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
   const [step, setStep] = useState("phone"); // phone | otp | name
   const [name, setName] = useState("");
+  const [generatedOtp, setGeneratedOtp] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const inputRefs = Array.from({ length: OTP_LENGTH }, () => useRef(null));
 
-  const handleSendOTP = async () => {
+  const handleSendOTP = () => {
     if (phone.length < 10) return;
-    setLoading(true);
-    setError("");
-    const { error: otpErr } = await supabase.auth.signInWithOtp({ phone });
-    setLoading(false);
-    if (otpErr) { setError(otpErr.message); return; }
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    setGeneratedOtp(code);
     setOtp(Array(OTP_LENGTH).fill(""));
+    setError("");
     setStep("otp");
   };
 
-  const handleVerify = async () => {
+  const handleVerify = () => {
     const token = otp.join("");
     if (token.length < OTP_LENGTH) return;
 
-    setLoading(true);
-    setError("");
-    const { data, error: verifyErr } = await supabase.auth.verifyOtp({ phone, token, type: "sms" });
-    if (verifyErr) {
-      setError(verifyErr.message);
+    if (token !== generatedOtp) {
+      setError("Incorrect code. Please try again.");
       setOtp(Array(OTP_LENGTH).fill(""));
       inputRefs[0].current?.focus();
-      setLoading(false);
       return;
     }
 
-    // Check if profile exists
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("name")
-      .eq("id", data.user.id)
-      .single();
-    setLoading(false);
-
-    if (profile?.name) {
-      onLogin();
-    } else {
-      setStep("name");
+    // Check localStorage for existing user with this phone
+    const saved = localStorage.getItem("momoghar_user");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.phone === phone) {
+        onLogin(parsed);
+        return;
+      }
     }
+    setStep("name");
   };
 
   const handleOtpChange = (index, value) => {
@@ -173,18 +164,16 @@ function AuthView({ onLogin }) {
     }
   };
 
-  const handleComplete = async () => {
+  const handleComplete = () => {
     if (!name.trim()) return;
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    await supabase.from("profiles").upsert({
-      id: user.id,
+    const userData = {
+      id: crypto.randomUUID(),
       name: name.trim(),
       phone,
       points: 0,
-    });
-    setLoading(false);
-    onLogin();
+    };
+    localStorage.setItem("momoghar_user", JSON.stringify(userData));
+    onLogin(userData);
   };
 
   useEffect(() => {
@@ -203,14 +192,20 @@ function AuthView({ onLogin }) {
             <>
               <p style={{ color: COLORS.textSecondary, fontSize: 14, margin: "0 0 20px" }}>Enter your phone number to get started</p>
               <Input value={phone} onChange={setPhone} placeholder="+16470000000" icon="📱" type="tel" />
-              <Button onClick={handleSendOTP} fullWidth style={{ marginTop: 16 }} disabled={phone.length < 10 || loading}>
-                {loading ? "Sending..." : "Send OTP"}
+              <Button onClick={handleSendOTP} fullWidth style={{ marginTop: 16 }} disabled={phone.length < 10}>
+                Send OTP
               </Button>
             </>
           )}
           {step === "otp" && (
             <>
-              <p style={{ color: COLORS.textSecondary, fontSize: 14, margin: "0 0 20px" }}>Enter the 6-digit code sent to {phone}</p>
+              <p style={{ color: COLORS.textSecondary, fontSize: 14, margin: "0 0 12px" }}>Enter the 6-digit code sent to {phone}</p>
+
+              {/* Dev mode: show OTP on screen */}
+              <div style={{ margin: "0 0 20px", padding: "10px 16px", background: COLORS.accentDim, border: `1px solid ${COLORS.accent}44`, borderRadius: 10, fontSize: 13 }}>
+                <span style={{ color: COLORS.textSecondary }}>SMS: </span>
+                <span style={{ color: COLORS.text, fontWeight: 700 }}>Your MomoGhar code is <span style={{ color: COLORS.accent, letterSpacing: 2, fontSize: 16 }}>{generatedOtp}</span></span>
+              </div>
 
               <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 8 }}>
                 {Array.from({ length: OTP_LENGTH }, (_, i) => (
@@ -230,18 +225,18 @@ function AuthView({ onLogin }) {
 
               {error && <p style={{ color: COLORS.danger, fontSize: 13, margin: "0 0 12px", fontWeight: 600 }}>{error}</p>}
 
-              <Button onClick={handleVerify} fullWidth disabled={otp.join("").length < OTP_LENGTH || loading} style={{ marginTop: 8 }}>
-                {loading ? "Verifying..." : "Verify Code"}
+              <Button onClick={handleVerify} fullWidth disabled={otp.join("").length < OTP_LENGTH} style={{ marginTop: 8 }}>
+                Verify Code
               </Button>
-              <button onClick={handleSendOTP} disabled={loading} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 13, cursor: "pointer", marginTop: 12, fontFamily: "inherit", opacity: loading ? 0.5 : 1 }}>Resend Code</button>
+              <button onClick={handleSendOTP} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 13, cursor: "pointer", marginTop: 12, fontFamily: "inherit" }}>Resend Code</button>
             </>
           )}
           {step === "name" && (
             <>
               <p style={{ color: COLORS.textSecondary, fontSize: 14, margin: "0 0 20px" }}>What should we call you?</p>
               <Input value={name} onChange={setName} placeholder="Your name" icon="👤" />
-              <Button onClick={handleComplete} fullWidth style={{ marginTop: 16 }} disabled={!name.trim() || loading}>
-                {loading ? "Saving..." : "Start Ordering"}
+              <Button onClick={handleComplete} fullWidth style={{ marginTop: 16 }} disabled={!name.trim()}>
+                Start Ordering
               </Button>
             </>
           )}
@@ -856,36 +851,15 @@ function normalizeMenuItem(row) {
 // ============================================================
 export default function App() {
   const [user, setUser] = useState(null); // { id, name, phone, points }
-  const [session, setSession] = useState(undefined); // undefined = loading, null = no session
   const [view, setView] = useState("customer"); // customer | dashboard
   const [orders, setOrders] = useState([]);
   const [menu, setMenu] = useState([]);
 
-  // 1. Restore session on mount
+  // 1. Restore user from localStorage on mount
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
-      if (s) loadProfile(s.user.id);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
-      if (s) loadProfile(s.user.id);
-      else setUser(null);
-    });
-
-    return () => subscription.unsubscribe();
+    const saved = localStorage.getItem("momoghar_user");
+    if (saved) setUser(JSON.parse(saved));
   }, []);
-
-  const loadProfile = async (userId) => {
-    const { data } = await supabase.from("profiles").select("*").eq("id", userId).single();
-    if (data) {
-      setUser({ id: userId, name: data.name, phone: data.phone, points: data.points || 0 });
-    } else {
-      // Profile not created yet (will happen after name step)
-      setUser(null);
-    }
-  };
 
   // 2. Load menu from DB
   useEffect(() => {
@@ -917,7 +891,6 @@ export default function App() {
     const channel = supabase
       .channel("orders-realtime")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders" }, async (payload) => {
-        // Fetch the full order with items
         const { data } = await supabase
           .from("orders")
           .select("*, order_items(*)")
@@ -940,25 +913,8 @@ export default function App() {
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
-  // Loading state
-  if (session === undefined) {
-    return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.bg }}>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>🥟</div>
-          <p style={{ color: COLORS.textSecondary, fontSize: 14 }}>Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!session || !user) {
-    return <AuthView onLogin={() => {
-      // Session is already set by onAuthStateChange; just reload profile
-      supabase.auth.getUser().then(({ data: { user: u } }) => {
-        if (u) loadProfile(u.id);
-      });
-    }} />;
+  if (!user) {
+    return <AuthView onLogin={(userData) => setUser(userData)} />;
   }
 
   if (view === "dashboard") {
