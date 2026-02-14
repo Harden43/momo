@@ -610,6 +610,158 @@ function StripePaymentSheet({ open, clientSecret, amount, onSuccess, onClose }) 
   );
 }
 
+// --- ORDER TRACKING MAP ---
+const KITCHEN_LOCATION = { lat: 43.6532, lng: -79.3832 };
+
+function OrderTrackingMap({ order }) {
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const [eta, setEta] = useState(null);
+  const [routeDistance, setRouteDistance] = useState(null);
+
+  useEffect(() => {
+    if (!mapRef.current || !order.lat || !order.lng) return;
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.remove();
+      mapInstanceRef.current = null;
+    }
+
+    const map = L.map(mapRef.current, {
+      zoomControl: false,
+      attributionControl: false,
+      scrollWheelZoom: false,
+    });
+
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      maxZoom: 19,
+    }).addTo(map);
+
+    // Kitchen marker (orange)
+    const kitchenIcon = L.divIcon({
+      className: "",
+      html: `<div style="width:36px;height:36px;background:${COLORS.accent};border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid ${COLORS.white};box-shadow:0 2px 8px rgba(0,0,0,0.5)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg></div>`,
+      iconSize: [36, 36],
+      iconAnchor: [18, 36],
+    });
+
+    // Delivery marker (green)
+    const deliveryIcon = L.divIcon({
+      className: "",
+      html: `<div style="width:36px;height:36px;background:${COLORS.success};border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid ${COLORS.white};box-shadow:0 2px 8px rgba(0,0,0,0.5)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></div>`,
+      iconSize: [36, 36],
+      iconAnchor: [18, 36],
+    });
+
+    L.marker([KITCHEN_LOCATION.lat, KITCHEN_LOCATION.lng], { icon: kitchenIcon }).addTo(map);
+    L.marker([order.lat, order.lng], { icon: deliveryIcon }).addTo(map);
+
+    const bounds = L.latLngBounds(
+      [KITCHEN_LOCATION.lat, KITCHEN_LOCATION.lng],
+      [order.lat, order.lng]
+    );
+    map.fitBounds(bounds, { padding: [60, 60] });
+
+    // Fetch driving route from OSRM
+    fetch(`https://router.project-osrm.org/route/v1/driving/${KITCHEN_LOCATION.lng},${KITCHEN_LOCATION.lat};${order.lng},${order.lat}?overview=full&geometries=geojson`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.routes && data.routes[0]) {
+          const route = data.routes[0];
+          const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+          L.polyline(coords, {
+            color: COLORS.accent,
+            weight: 4,
+            opacity: 0.85,
+            dashArray: order.status === "delivering" ? null : "8, 12",
+          }).addTo(map);
+          setEta(Math.round(route.duration / 60));
+          setRouteDistance((route.distance / 1000).toFixed(1));
+        }
+      })
+      .catch(() => {});
+
+    mapInstanceRef.current = map;
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, [order.id, order.lat, order.lng, order.status]);
+
+  if (!order.lat || !order.lng) return null;
+
+  const getEtaInfo = () => {
+    const drive = eta || 10;
+    switch (order.status) {
+      case "pending": return { time: drive + 25, label: "Estimated delivery" };
+      case "accepted": return { time: drive + 20, label: "Preparing your order" };
+      case "cooking": return { time: drive + 12, label: "Cooking your momos" };
+      case "ready": return { time: drive + 3, label: "Ready for pickup" };
+      case "delivering": return { time: drive, label: "Arriving in" };
+      default: return null;
+    }
+  };
+
+  const etaInfo = getEtaInfo();
+
+  return (
+    <div style={{ position: "relative", borderRadius: 14, overflow: "hidden", border: `1px solid ${COLORS.border}`, marginBottom: 12 }}>
+      <div ref={mapRef} style={{ height: 200, width: "100%" }} />
+
+      {/* ETA overlay */}
+      {etaInfo && (
+        <div style={{
+          position: "absolute", top: 12, left: 12, zIndex: 10,
+          background: `${COLORS.card}ee`, borderRadius: 12, padding: "10px 14px",
+          border: `1px solid ${COLORS.border}`, boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
+          backdropFilter: "blur(8px)",
+        }}>
+          <p style={{ margin: 0, fontSize: 11, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5 }}>{etaInfo.label}</p>
+          <p style={{ margin: "2px 0 0", fontSize: 22, fontWeight: 800, color: COLORS.text }}>
+            {etaInfo.time} <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary }}>min</span>
+          </p>
+          {routeDistance && (
+            <p style={{ margin: "2px 0 0", fontSize: 11, color: COLORS.textMuted }}>{routeDistance} km</p>
+          )}
+        </div>
+      )}
+
+      {/* Status pill */}
+      {(() => {
+        const config = STATUS_CONFIG[order.status];
+        return (
+          <div style={{
+            position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)", zIndex: 10,
+            background: `${COLORS.card}ee`, borderRadius: 20, padding: "6px 14px",
+            border: `1px solid ${config.color}44`, display: "flex", alignItems: "center", gap: 8,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.4)", backdropFilter: "blur(8px)",
+          }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: config.color }} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: config.color }}>{config.label}</span>
+          </div>
+        );
+      })()}
+
+      {/* Legend */}
+      <div style={{
+        position: "absolute", top: 12, right: 12, zIndex: 10,
+        background: `${COLORS.card}ee`, borderRadius: 10, padding: "8px 10px",
+        border: `1px solid ${COLORS.border}`, backdropFilter: "blur(8px)",
+        display: "flex", flexDirection: "column", gap: 4,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: COLORS.textSecondary }}>
+          <div style={{ width: 10, height: 10, borderRadius: "50%", background: COLORS.accent }} /> Kitchen
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: COLORS.textSecondary }}>
+          <div style={{ width: 10, height: 10, borderRadius: "50%", background: COLORS.success }} /> You
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // --- BOTTOM NAV ---
 const NAV_HEIGHT = 64;
 
@@ -960,6 +1112,12 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
       </div>
 
       <div style={{ padding: 20, paddingBottom: NAV_HEIGHT + 24, maxWidth: 600, margin: "0 auto" }}>
+        {/* Live tracking map for the most recent active order */}
+        {(() => {
+          const activeOrder = orders.find(o => o.userId === user.id && !["delivered", "cancelled"].includes(o.status));
+          return activeOrder ? <OrderTrackingMap order={activeOrder} /> : null;
+        })()}
+
         {orders.filter(o => o.userId === user.id).length === 0 ? (
           <div style={{ textAlign: "center", padding: 60 }}>
             <div style={{ marginBottom: 12 }}><Inbox size={48} color={COLORS.textMuted} /></div>
