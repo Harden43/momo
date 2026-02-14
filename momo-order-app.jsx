@@ -673,6 +673,8 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
   const [mapOpen, setMapOpen] = useState(false);
   const [stripeClientSecret, setStripeClientSecret] = useState("");
   const [stripeSheetOpen, setStripeSheetOpen] = useState(false);
+  const [orderLoading, setOrderLoading] = useState(false);
+  const [orderError, setOrderError] = useState("");
 
   const filteredItems = menu.filter(i => activeCategory === "all" || i.category === activeCategory);
   const cartTotal = cart.reduce((sum, c) => sum + c.price * c.qty, 0);
@@ -707,7 +709,11 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
       lng: deliveryLng,
     }).select().single();
 
-    if (error) { console.error("Order insert error:", error); return; }
+    if (error) {
+      setOrderError(error.message || "Failed to place order");
+      setOrderLoading(false);
+      return;
+    }
 
     await supabase.from("order_items").insert(
       cart.map(c => ({ order_id: order.id, menu_item_id: c.id, name: c.name, qty: c.qty, price: c.price }))
@@ -725,10 +731,15 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
 
     setCart([]);
     setSpecialInstructions("");
+    setOrderLoading(false);
     setScreen("tracking");
   };
 
   const placeOrder = async () => {
+    if (cart.length === 0) return;
+    setOrderError("");
+    setOrderLoading(true);
+
     if (paymentMethod === "cash") {
       await insertOrder("pending");
       return;
@@ -744,13 +755,16 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
       });
       const data = await res.json();
       if (data.error) {
-        console.error("Payment intent error:", data.error);
+        setOrderError(data.error);
+        setOrderLoading(false);
         return;
       }
       setStripeClientSecret(data.clientSecret);
       setStripeSheetOpen(true);
+      setOrderLoading(false);
     } catch (err) {
-      console.error("Payment error:", err);
+      setOrderError("Payment failed. Please try again.");
+      setOrderLoading(false);
     }
   };
 
@@ -924,7 +938,15 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
             style={{ width: "100%", padding: 12, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.text, fontSize: 14, fontFamily: "inherit", resize: "none", boxSizing: "border-box", outline: "none" }} />
         </div>
 
-        <Button onClick={placeOrder} fullWidth size="lg" style={{ marginTop: 16, marginBottom: NAV_HEIGHT + 16 }}><ShoppingCart size={16} /> Place Order</Button>
+        {orderError && (
+          <p style={{ margin: "12px 0 0", fontSize: 13, color: COLORS.danger, display: "flex", alignItems: "center", gap: 6 }}>
+            <XCircle size={14} /> {orderError}
+          </p>
+        )}
+
+        <Button onClick={placeOrder} fullWidth size="lg" disabled={cart.length === 0 || orderLoading} style={{ marginTop: 16, marginBottom: NAV_HEIGHT + 16 }}>
+          {orderLoading ? "Processing..." : <><ShoppingCart size={16} /> Place Order</>}
+        </Button>
       </div>
       <BottomNav active="cart" onNavigate={setScreen} cartCount={cartCount} />
     </div>
