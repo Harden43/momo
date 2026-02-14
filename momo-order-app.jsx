@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "./src/supabaseClient";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import {
   UtensilsCrossed, Utensils, Flame, Wind, Droplets, Zap,
   Clock, CheckCircle, Package, Truck, CircleCheck, XCircle,
@@ -12,6 +14,10 @@ import {
 // ============================================================
 // MOMO ORDER - Home Kitchen Ordering Platform
 // ============================================================
+
+const stripePromise = import.meta.env.VITE_STRIPE_PUBLIC_KEY
+  ? loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY)
+  : null;
 
 // Map menu item category to an icon component
 const CATEGORY_ICON = {
@@ -492,6 +498,118 @@ function FullScreenMap({ open, onClose, initialLat, initialLng, onConfirm }) {
   );
 }
 
+// --- STRIPE PAYMENT SHEET ---
+function CheckoutForm({ amount, onSuccess, onClose }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [error, setError] = useState("");
+  const [processing, setProcessing] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+
+    setProcessing(true);
+    setError("");
+
+    const { error: submitError } = await elements.submit();
+    if (submitError) {
+      setError(submitError.message);
+      setProcessing(false);
+      return;
+    }
+
+    const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      confirmParams: { return_url: window.location.href },
+      redirect: "if_required",
+    });
+
+    if (confirmError) {
+      setError(confirmError.message);
+      setProcessing(false);
+    } else if (paymentIntent && paymentIntent.status === "succeeded") {
+      onSuccess(paymentIntent.id);
+    }
+  };
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 100, background: COLORS.bg,
+      display: "flex", flexDirection: "column",
+    }}>
+      <div style={{
+        padding: "12px 16px", display: "flex", alignItems: "center", gap: 12,
+        borderBottom: `1px solid ${COLORS.border}`, background: COLORS.surface,
+        paddingTop: "calc(12px + env(safe-area-inset-top, 0px))",
+      }}>
+        <button onClick={onClose} disabled={processing} style={{
+          background: "none", border: "none", color: COLORS.text, cursor: "pointer",
+          padding: 4, display: "flex", opacity: processing ? 0.5 : 1,
+        }}>
+          <XCircle size={22} />
+        </button>
+        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, flex: 1 }}>Payment</h2>
+        <Badge><CreditCard size={12} /> ${(amount / 100).toFixed(2)}</Badge>
+      </div>
+
+      <form onSubmit={handleSubmit} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        <div style={{ flex: 1, padding: 20, overflowY: "auto" }}>
+          <PaymentElement options={{
+            layout: "tabs",
+          }} />
+        </div>
+
+        <div style={{
+          padding: "14px 16px", background: COLORS.surface,
+          borderTop: `1px solid ${COLORS.border}`,
+          paddingBottom: "calc(14px + env(safe-area-inset-bottom, 0px))",
+        }}>
+          {error && (
+            <p style={{
+              margin: "0 0 10px", fontSize: 13, color: COLORS.danger,
+              display: "flex", alignItems: "center", gap: 6,
+            }}>
+              <XCircle size={14} /> {error}
+            </p>
+          )}
+          <Button
+            onClick={handleSubmit}
+            fullWidth
+            disabled={!stripe || processing}
+            style={{ opacity: processing ? 0.7 : 1 }}
+          >
+            {processing ? "Processing..." : `Pay $${(amount / 100).toFixed(2)}`}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function StripePaymentSheet({ open, clientSecret, amount, onSuccess, onClose }) {
+  if (!open || !clientSecret || !stripePromise) return null;
+
+  return (
+    <Elements stripe={stripePromise} options={{
+      clientSecret,
+      appearance: {
+        theme: "night",
+        variables: {
+          colorPrimary: COLORS.accent,
+          colorBackground: COLORS.surface,
+          colorText: COLORS.text,
+          colorDanger: COLORS.danger,
+          borderRadius: "10px",
+          fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif",
+        },
+      },
+    }}>
+      <CheckoutForm amount={amount} onSuccess={onSuccess} onClose={onClose} />
+    </Elements>
+  );
+}
+
 // --- BOTTOM NAV ---
 const NAV_HEIGHT = 64;
 
@@ -553,6 +671,8 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
   const [deliveryLng, setDeliveryLng] = useState(-79.3832);
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [mapOpen, setMapOpen] = useState(false);
+  const [stripeClientSecret, setStripeClientSecret] = useState("");
+  const [stripeSheetOpen, setStripeSheetOpen] = useState(false);
 
   const filteredItems = menu.filter(i => activeCategory === "all" || i.category === activeCategory);
   const cartTotal = cart.reduce((sum, c) => sum + c.price * c.qty, 0);
@@ -571,7 +691,7 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
     setCart(prev => prev.map(c => c.id === id ? { ...c, qty: Math.max(0, c.qty + delta) } : c).filter(c => c.qty > 0));
   };
 
-  const placeOrder = async () => {
+  const insertOrder = async (paymentStatus = "pending", stripePaymentIntentId = null) => {
     const orderNumber = generateOrderNumber();
     const { data: order, error } = await supabase.from("orders").insert({
       order_number: orderNumber,
@@ -580,7 +700,7 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
       total: cartTotal + deliveryFee,
       status: "pending",
       payment_method: paymentMethod,
-      payment_status: paymentMethod === "stripe" ? "paid" : "pending",
+      payment_status: paymentStatus,
       special_instructions: specialInstructions,
       delivery_address: deliveryAddress,
       lat: deliveryLat,
@@ -593,7 +713,6 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
       cart.map(c => ({ order_id: order.id, menu_item_id: c.id, name: c.name, qty: c.qty, price: c.price }))
     );
 
-    // Fetch with items for local state
     const { data: fullOrder } = await supabase
       .from("orders")
       .select("*, order_items(*)")
@@ -607,6 +726,38 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
     setCart([]);
     setSpecialInstructions("");
     setScreen("tracking");
+  };
+
+  const placeOrder = async () => {
+    if (paymentMethod === "cash") {
+      await insertOrder("pending");
+      return;
+    }
+
+    // Stripe card payment
+    const amountInCents = Math.round((cartTotal + deliveryFee) * 100);
+    try {
+      const res = await fetch("/api/create-payment-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: amountInCents }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        console.error("Payment intent error:", data.error);
+        return;
+      }
+      setStripeClientSecret(data.clientSecret);
+      setStripeSheetOpen(true);
+    } catch (err) {
+      console.error("Payment error:", err);
+    }
+  };
+
+  const handleStripeSuccess = async (paymentIntentId) => {
+    setStripeSheetOpen(false);
+    setStripeClientSecret("");
+    await insertOrder("paid", paymentIntentId);
   };
 
   const cartCount = cart.reduce((s, c) => s + c.qty, 0);
@@ -756,6 +907,14 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
           initialLat={deliveryLat}
           initialLng={deliveryLng}
           onConfirm={(addr, lat, lng) => { setDeliveryAddress(addr); setDeliveryLat(lat); setDeliveryLng(lng); }}
+        />
+
+        <StripePaymentSheet
+          open={stripeSheetOpen}
+          clientSecret={stripeClientSecret}
+          amount={Math.round((cartTotal + deliveryFee) * 100)}
+          onSuccess={handleStripeSuccess}
+          onClose={() => { setStripeSheetOpen(false); setStripeClientSecret(""); }}
         />
 
         {/* Special Instructions */}
