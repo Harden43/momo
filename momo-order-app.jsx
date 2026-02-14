@@ -708,7 +708,7 @@ function OrderTrackingMap({ order }) {
 
   return (
     <div style={{ position: "relative", borderRadius: 14, overflow: "hidden", border: `1px solid ${COLORS.border}`, marginBottom: 12 }}>
-      <div ref={mapRef} style={{ height: 200, width: "100%" }} />
+      <div ref={mapRef} style={{ height: 300, width: "100%" }} />
 
       {/* ETA overlay */}
       {etaInfo && (
