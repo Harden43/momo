@@ -934,8 +934,9 @@ function CustomerApp({ user, orders, setOrders, menu, storeOpen }) {
   const [orderLoading, setOrderLoading] = useState(false);
   const [orderError, setOrderError] = useState("");
 
-  const syncUser = (updates) => {
-    supabase.from("users").upsert({ id: user.id, name: user.name, phone: user.phone, points: user.points || 0, ...updates }, { onConflict: "id" }).then();
+  const syncUser = async (updates) => {
+    const { error } = await supabase.from("users").upsert({ id: user.id, name: user.name, phone: user.phone, points: user.points || 0, ...updates }, { onConflict: "id" });
+    if (error) console.error("syncUser error:", error);
   };
 
   const saveUserAddress = (addr, lat, lng) => {
@@ -2107,9 +2108,10 @@ export default function App() {
       const local = JSON.parse(saved);
       setUser(local);
       // Fetch latest from Supabase to sync cross-device changes
-      supabase.from("users").select("*").eq("id", local.id).single().then(({ data }) => {
+      supabase.from("users").select("*").eq("phone", local.phone).single().then(({ data, error }) => {
+        if (error) console.error("User sync fetch error:", error);
         if (data) {
-          const synced = { ...local, name: data.name, phone: data.phone, points: data.points || local.points || 0, avatar: data.avatar || local.avatar || null, address: data.address || local.address || "", addressLat: data.address_lat || local.addressLat || null, addressLng: data.address_lng || local.addressLng || null };
+          const synced = { ...local, id: data.id, name: data.name, phone: data.phone, points: data.points || local.points || 0, avatar: data.avatar || local.avatar || null, address: data.address || local.address || "", addressLat: data.address_lat || local.addressLat || null, addressLng: data.address_lng || local.addressLng || null };
           localStorage.setItem("momoghar_user", JSON.stringify(synced));
           setUser(synced);
         }
