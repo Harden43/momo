@@ -6,7 +6,7 @@ import {
   Phone, User, Users, Star, Home, MapPin, Map, CreditCard, Banknote,
   Settings, ArrowLeft, ChevronRight, ClipboardList, Ticket, Gift,
   MessageSquare, Inbox, DollarSign, Plus, Minus, ShoppingCart,
-  LayoutGrid, Leaf, BarChart3, TrendingUp, Navigation, CircleDot,
+  LayoutGrid, Leaf, BarChart3, TrendingUp, CircleDot,
 } from "lucide-react";
 
 // ============================================================
@@ -279,6 +279,56 @@ function AuthView({ onLogin }) {
   );
 }
 
+// --- BOTTOM NAV ---
+const NAV_HEIGHT = 64;
+
+function BottomNav({ active, onNavigate, cartCount }) {
+  const tabs = [
+    { id: "menu", label: "Home", Icon: UtensilsCrossed },
+    { id: "tracking", label: "Orders", Icon: ClipboardList },
+    { id: "cart", label: "Cart", Icon: ShoppingCart, badge: cartCount },
+    { id: "profile", label: "Profile", Icon: User },
+  ];
+
+  return (
+    <nav style={{
+      position: "fixed", bottom: 0, left: 0, right: 0,
+      height: `calc(${NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))`,
+      paddingBottom: "env(safe-area-inset-bottom, 0px)",
+      background: COLORS.surface, borderTop: `1px solid ${COLORS.border}`,
+      display: "flex", alignItems: "center", justifyContent: "space-around",
+      zIndex: 50,
+    }}>
+      {tabs.map(tab => {
+        const isActive = active === tab.id;
+        return (
+          <button key={tab.id} onClick={() => onNavigate(tab.id)}
+            style={{
+              flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+              background: "none", border: "none", cursor: "pointer", padding: "8px 0",
+              color: isActive ? COLORS.accent : COLORS.textMuted, fontFamily: "inherit",
+              position: "relative", transition: "color 0.2s",
+            }}>
+            <div style={{ position: "relative" }}>
+              <tab.Icon size={22} strokeWidth={isActive ? 2.2 : 1.5} />
+              {tab.badge > 0 && (
+                <span style={{
+                  position: "absolute", top: -6, right: -10,
+                  background: COLORS.accent, color: COLORS.white,
+                  fontSize: 10, fontWeight: 800, borderRadius: 10,
+                  minWidth: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center",
+                  padding: "0 4px",
+                }}>{tab.badge}</span>
+              )}
+            </div>
+            <span style={{ fontSize: 10, fontWeight: isActive ? 700 : 500 }}>{tab.label}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
 // --- CUSTOMER APP ---
 function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
   const [cart, setCart] = useState([]);
@@ -354,10 +404,7 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}><UtensilsCrossed size={20} color={COLORS.accent} strokeWidth={2} /> MomoGhar</h1>
           <p style={{ margin: 0, fontSize: 12, color: COLORS.textMuted }}>Open • Delivery in ~30 min</p>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <Badge color={COLORS.accent} bg={COLORS.accentDim}><Star size={12} /> {user.points} pts</Badge>
-          <button onClick={() => setScreen("profile")} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: "50%", width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><User size={18} color={COLORS.textSecondary} /></button>
-        </div>
+        <Badge color={COLORS.accent} bg={COLORS.accentDim}><Star size={12} /> {user.points} pts</Badge>
       </div>
 
       {/* Hero Banner */}
@@ -377,7 +424,7 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
       </div>
 
       {/* Menu Grid */}
-      <div style={{ padding: "16px 20px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(280px, 100%), 1fr))", gap: 12, paddingBottom: cartCount > 0 ? 100 : 20 }}>
+      <div style={{ padding: "16px 20px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(280px, 100%), 1fr))", gap: 12, paddingBottom: NAV_HEIGHT + 24 }}>
         {filteredItems.map(item => {
           const inCart = cart.find(c => c.id === item.id);
           return (
@@ -411,27 +458,7 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
         })}
       </div>
 
-      {/* Floating Cart Bar */}
-      {cartCount > 0 && (
-        <div onClick={() => setScreen("cart")} style={{ position: "fixed", bottom: "calc(16px + env(safe-area-inset-bottom, 0px))", left: 16, right: 16, maxWidth: 600, margin: "0 auto", padding: "14px 20px", background: COLORS.accent, borderRadius: 14, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", boxShadow: `0 8px 32px ${COLORS.accentGlow}`, zIndex: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ background: "rgba(255,255,255,0.2)", borderRadius: 8, padding: "4px 10px", fontWeight: 800, fontSize: 14 }}>{cartCount}</span>
-            <span style={{ fontWeight: 600, fontSize: 14 }}>View Cart</span>
-          </div>
-          <span style={{ fontWeight: 800, fontSize: 16 }}>${(cartTotal + deliveryFee).toFixed(2)}</span>
-        </div>
-      )}
-
-      {/* Active Orders Banner */}
-      {activeOrders.length > 0 && (
-        <div onClick={() => setScreen("tracking")} style={{ position: "fixed", bottom: cartCount > 0 ? `calc(80px + env(safe-area-inset-bottom, 0px))` : `calc(16px + env(safe-area-inset-bottom, 0px))`, left: 16, right: 16, maxWidth: 600, margin: "0 auto", padding: "12px 20px", background: COLORS.successDim, border: `1px solid ${COLORS.success}44`, borderRadius: 14, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", zIndex: 19 }}>
-          <span style={{ fontSize: 14, color: COLORS.success, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}><Navigation size={14} /> {activeOrders.length} Active Order{activeOrders.length > 1 ? "s" : ""}</span>
-          <span style={{ fontSize: 12, color: COLORS.success, display: "flex", alignItems: "center", gap: 4 }}>Track <ChevronRight size={14} /></span>
-        </div>
-      )}
-
-      {/* Dashboard Switch */}
-      <button onClick={onSwitchView} style={{ position: "fixed", top: 70, right: 16, background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "8px 12px", cursor: "pointer", color: COLORS.textSecondary, fontSize: 11, fontFamily: "inherit", zIndex: 20, display: "flex", alignItems: "center", gap: 4 }}><Settings size={12} /> Dashboard</button>
+      <BottomNav active="menu" onNavigate={setScreen} cartCount={cartCount} />
     </div>
   );
 
@@ -439,7 +466,6 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
   if (screen === "cart") return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text }}>
       <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, borderBottom: `1px solid ${COLORS.border}`, position: "sticky", top: 0, background: COLORS.bg, zIndex: 10 }}>
-        <button onClick={() => setScreen("menu")} style={{ background: "none", border: "none", color: COLORS.text, cursor: "pointer", padding: 0, display: "flex" }}><ArrowLeft size={20} /></button>
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Your Cart</h2>
         <Badge>{cart.length} items</Badge>
       </div>
@@ -510,8 +536,9 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
           <p style={{ margin: "8px 0 0", fontSize: 12, color: COLORS.success, display: "flex", alignItems: "center", gap: 4 }}><Gift size={12} /> You'll earn {Math.floor((cartTotal + deliveryFee) * 10)} points with this order!</p>
         </div>
 
-        <Button onClick={placeOrder} fullWidth size="lg" style={{ marginTop: 16 }}><ShoppingCart size={16} /> Place Order</Button>
+        <Button onClick={placeOrder} fullWidth size="lg" style={{ marginTop: 16, marginBottom: NAV_HEIGHT + 16 }}><ShoppingCart size={16} /> Place Order</Button>
       </div>
+      <BottomNav active="cart" onNavigate={setScreen} cartCount={cartCount} />
     </div>
   );
 
@@ -519,11 +546,10 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
   if (screen === "tracking") return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text }}>
       <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, borderBottom: `1px solid ${COLORS.border}`, position: "sticky", top: 0, background: COLORS.bg, zIndex: 10 }}>
-        <button onClick={() => setScreen("menu")} style={{ background: "none", border: "none", color: COLORS.text, cursor: "pointer", padding: 0, display: "flex" }}><ArrowLeft size={20} /></button>
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>My Orders</h2>
       </div>
 
-      <div style={{ padding: 20, maxWidth: 600, margin: "0 auto" }}>
+      <div style={{ padding: 20, paddingBottom: NAV_HEIGHT + 24, maxWidth: 600, margin: "0 auto" }}>
         {orders.filter(o => o.userId === user.id).length === 0 ? (
           <div style={{ textAlign: "center", padding: 60 }}>
             <div style={{ marginBottom: 12 }}><Inbox size={48} color={COLORS.textMuted} /></div>
@@ -576,6 +602,7 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
           })
         )}
       </div>
+      <BottomNav active="tracking" onNavigate={setScreen} cartCount={cartCount} />
     </div>
   );
 
@@ -583,7 +610,6 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
   if (screen === "profile") return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text }}>
       <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, borderBottom: `1px solid ${COLORS.border}` }}>
-        <button onClick={() => setScreen("menu")} style={{ background: "none", border: "none", color: COLORS.text, cursor: "pointer", padding: 0, display: "flex" }}><ArrowLeft size={20} /></button>
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Profile</h2>
       </div>
       <div style={{ padding: 20, maxWidth: 500, margin: "0 auto" }}>
@@ -617,8 +643,9 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
           </div>
         ))}
 
-        <Button variant="danger" fullWidth style={{ marginTop: 24 }} onClick={onSwitchView}>Switch to Dashboard</Button>
+        <Button variant="danger" fullWidth style={{ marginTop: 24, marginBottom: NAV_HEIGHT + 16 }} onClick={onSwitchView}>Switch to Dashboard</Button>
       </div>
+      <BottomNav active="profile" onNavigate={setScreen} cartCount={cartCount} />
     </div>
   );
 }
