@@ -101,21 +101,18 @@ function AuthView({ onLogin }) {
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
   const [step, setStep] = useState("phone"); // phone | otp | name
   const [name, setName] = useState("");
-  const [generatedOtp, setGeneratedOtp] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const inputRefs = Array.from({ length: OTP_LENGTH }, () => useRef(null));
 
-  // Dev helper: derive a Supabase email+password from the phone number
-  const phoneToEmail = (p) => `${p.replace(/[^0-9]/g, "")}@momoghar.app`;
-  const phoneToPassword = (p) => `momo-${p.replace(/[^0-9]/g, "")}`;
-
-  const handleSendOTP = () => {
+  const handleSendOTP = async () => {
     if (phone.length < 10) return;
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    setGeneratedOtp(code);
-    setOtp(Array(OTP_LENGTH).fill(""));
+    setLoading(true);
     setError("");
+    const { error: otpErr } = await supabase.auth.signInWithOtp({ phone });
+    setLoading(false);
+    if (otpErr) { setError(otpErr.message); return; }
+    setOtp(Array(OTP_LENGTH).fill(""));
     setStep("otp");
   };
 
@@ -123,25 +120,15 @@ function AuthView({ onLogin }) {
     const token = otp.join("");
     if (token.length < OTP_LENGTH) return;
 
-    if (token !== generatedOtp) {
-      setError("Incorrect code. Please try again.");
-      setOtp(Array(OTP_LENGTH).fill(""));
-      inputRefs[0].current?.focus();
-      return;
-    }
-
-    // OTP matched — sign into Supabase with phone-derived credentials
     setLoading(true);
     setError("");
-    const email = phoneToEmail(phone);
-    const password = phoneToPassword(phone);
-
-    // Try sign in first, fall back to sign up for new users
-    let { data, error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
-    if (signInErr) {
-      const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({ email, password });
-      if (signUpErr) { setError(signUpErr.message); setLoading(false); return; }
-      data = signUpData;
+    const { data, error: verifyErr } = await supabase.auth.verifyOtp({ phone, token, type: "sms" });
+    if (verifyErr) {
+      setError(verifyErr.message);
+      setOtp(Array(OTP_LENGTH).fill(""));
+      inputRefs[0].current?.focus();
+      setLoading(false);
+      return;
     }
 
     // Check if profile exists
@@ -216,20 +203,14 @@ function AuthView({ onLogin }) {
             <>
               <p style={{ color: COLORS.textSecondary, fontSize: 14, margin: "0 0 20px" }}>Enter your phone number to get started</p>
               <Input value={phone} onChange={setPhone} placeholder="+16470000000" icon="📱" type="tel" />
-              <Button onClick={handleSendOTP} fullWidth style={{ marginTop: 16 }} disabled={phone.length < 10}>
-                Send OTP
+              <Button onClick={handleSendOTP} fullWidth style={{ marginTop: 16 }} disabled={phone.length < 10 || loading}>
+                {loading ? "Sending..." : "Send OTP"}
               </Button>
             </>
           )}
           {step === "otp" && (
             <>
-              <p style={{ color: COLORS.textSecondary, fontSize: 14, margin: "0 0 12px" }}>Enter the 6-digit code sent to {phone}</p>
-
-              {/* Dev mode: show OTP on screen */}
-              <div style={{ margin: "0 0 20px", padding: "10px 16px", background: COLORS.accentDim, border: `1px solid ${COLORS.accent}44`, borderRadius: 10, fontSize: 13 }}>
-                <span style={{ color: COLORS.textSecondary }}>SMS: </span>
-                <span style={{ color: COLORS.text, fontWeight: 700 }}>Your MomoGhar code is <span style={{ color: COLORS.accent, letterSpacing: 2, fontSize: 16 }}>{generatedOtp}</span></span>
-              </div>
+              <p style={{ color: COLORS.textSecondary, fontSize: 14, margin: "0 0 20px" }}>Enter the 6-digit code sent to {phone}</p>
 
               <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 8 }}>
                 {Array.from({ length: OTP_LENGTH }, (_, i) => (
