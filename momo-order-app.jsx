@@ -407,12 +407,6 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
         <Badge color={COLORS.accent} bg={COLORS.accentDim}><Star size={12} /> {user.points} pts</Badge>
       </div>
 
-      {/* Hero Banner */}
-      <div style={{ margin: "16px 20px", padding: 24, borderRadius: 16, background: `linear-gradient(135deg, ${COLORS.accent}22, ${COLORS.accent}08)`, border: `1px solid ${COLORS.accent}33` }}>
-        <p style={{ margin: 0, fontSize: 13, color: COLORS.accent, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}><Truck size={14} /> FREE DELIVERY</p>
-        <p style={{ margin: "4px 0 0", fontSize: 15, color: COLORS.text }}>On orders over $25 • Use code <strong>MOMO25</strong></p>
-      </div>
-
       {/* Categories */}
       <div className="hide-scrollbar" style={{ padding: "8px 20px", display: "flex", gap: 8, overflowX: "auto" }}>
         {CATEGORIES.map(cat => (
