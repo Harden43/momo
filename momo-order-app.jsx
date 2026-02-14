@@ -45,26 +45,26 @@ function useIsMobile(breakpoint = 640) {
 }
 
 const COLORS = {
-  bg: "#0C0C0E",
-  surface: "#161618",
-  surfaceHover: "#1E1E21",
-  card: "#1A1A1D",
-  cardHover: "#222225",
-  border: "#242428",
-  borderLight: "#2E2E33",
-  accent: "#E85A2B",
-  accentHover: "#F06D3F",
-  accentDim: "rgba(232,90,43,0.10)",
-  accentGlow: "rgba(232,90,43,0.20)",
+  bg: "#0A0A0A",
+  surface: "#141414",
+  surfaceHover: "#1C1C1C",
+  card: "#181818",
+  cardHover: "#202020",
+  border: "#2A2A2A",
+  borderLight: "#333333",
+  accent: "#FFFFFF",
+  accentHover: "#E0E0E0",
+  accentDim: "rgba(255,255,255,0.07)",
+  accentGlow: "rgba(255,255,255,0.12)",
   success: "#10B981",
   successDim: "rgba(16,185,129,0.10)",
   warning: "#F59E0B",
   warningDim: "rgba(245,158,11,0.10)",
   danger: "#EF4444",
   dangerDim: "rgba(239,68,68,0.10)",
-  text: "#ECECEF",
-  textSecondary: "#8E8E93",
-  textMuted: "#5A5A5E",
+  text: "#F0F0F0",
+  textSecondary: "#8A8A8A",
+  textMuted: "#555555",
   white: "#FFFFFF",
 };
 
@@ -83,8 +83,8 @@ const ORDER_STATUSES = ["pending", "accepted", "cooking", "ready", "delivering",
 
 const STATUS_CONFIG = {
   pending: { label: "Pending", color: COLORS.warning, bg: COLORS.warningDim, Icon: Clock },
-  accepted: { label: "Accepted", color: COLORS.accent, bg: COLORS.accentDim, Icon: CheckCircle },
-  cooking: { label: "Cooking", color: COLORS.accent, bg: COLORS.accentDim, Icon: Flame },
+  accepted: { label: "Accepted", color: "#60A5FA", bg: "rgba(96,165,250,0.10)", Icon: CheckCircle },
+  cooking: { label: "Cooking", color: COLORS.warning, bg: COLORS.warningDim, Icon: Flame },
   ready: { label: "Ready", color: COLORS.success, bg: COLORS.successDim, Icon: Package },
   delivering: { label: "Out for Delivery", color: COLORS.success, bg: COLORS.successDim, Icon: Truck },
   delivered: { label: "Delivered", color: COLORS.success, bg: COLORS.successDim, Icon: CircleCheck },
@@ -109,7 +109,7 @@ function Button({ children, onClick, variant = "primary", size = "md", disabled,
   const base = { border: "none", borderRadius: 12, fontWeight: 500, cursor: disabled ? "not-allowed" : "pointer", transition: "all 0.2s", fontFamily: "inherit", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: disabled ? 0.5 : 1, width: fullWidth ? "100%" : "auto" };
   const sizes = { sm: { padding: "8px 14px", fontSize: 13 }, md: { padding: "12px 20px", fontSize: 14 }, lg: { padding: "16px 28px", fontSize: 15 } };
   const variants = {
-    primary: { background: COLORS.accent, color: COLORS.white },
+    primary: { background: COLORS.accent, color: COLORS.bg },
     secondary: { background: COLORS.surface, color: COLORS.text, border: `1px solid ${COLORS.border}` },
     ghost: { background: "transparent", color: COLORS.textSecondary },
     danger: { background: COLORS.dangerDim, color: COLORS.danger },
@@ -636,10 +636,10 @@ function OrderTrackingMap({ order }) {
       maxZoom: 19,
     }).addTo(map);
 
-    // Kitchen marker (orange)
+    // Kitchen marker
     const kitchenIcon = L.divIcon({
       className: "",
-      html: `<div style="width:36px;height:36px;background:${COLORS.accent};border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid ${COLORS.white};box-shadow:0 2px 8px rgba(0,0,0,0.5)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg></div>`,
+      html: `<div style="width:36px;height:36px;background:${COLORS.accent};border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid ${COLORS.border};box-shadow:0 2px 8px rgba(0,0,0,0.5)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${COLORS.bg}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg></div>`,
       iconSize: [36, 36],
       iconAnchor: [18, 36],
     });
@@ -797,7 +797,7 @@ function BottomNav({ active, onNavigate, cartCount }) {
               {tab.badge > 0 && (
                 <span style={{
                   position: "absolute", top: -6, right: -10,
-                  background: COLORS.accent, color: COLORS.white,
+                  background: COLORS.accent, color: COLORS.bg,
                   fontSize: 10, fontWeight: 700, borderRadius: 10,
                   minWidth: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center",
                   padding: "0 4px",
@@ -972,7 +972,7 @@ function CustomerApp({ user, orders, setOrders, menu }) {
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <button onClick={() => updateQty(item.id, -1)} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${COLORS.border}`, background: COLORS.surface, color: COLORS.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Minus size={14} /></button>
                         <span style={{ fontWeight: 600, fontSize: 14, minWidth: 20, textAlign: "center" }}>{inCart.qty}</span>
-                        <button onClick={() => updateQty(item.id, 1)} style={{ width: 30, height: 30, borderRadius: 8, border: "none", background: COLORS.accent, color: COLORS.white, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Plus size={14} /></button>
+                        <button onClick={() => updateQty(item.id, 1)} style={{ width: 30, height: 30, borderRadius: 8, border: "none", background: COLORS.accent, color: COLORS.bg, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Plus size={14} /></button>
                       </div>
                     ) : (
                       <Button size="sm" onClick={() => addToCart(item)}><Plus size={14} /> Add</Button>
@@ -1011,7 +1011,7 @@ function CustomerApp({ user, orders, setOrders, menu }) {
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <button onClick={() => updateQty(item.id, -1)} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${COLORS.border}`, background: COLORS.surface, color: COLORS.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Minus size={14} /></button>
               <span style={{ fontWeight: 600, minWidth: 20, textAlign: "center" }}>{item.qty}</span>
-              <button onClick={() => updateQty(item.id, 1)} style={{ width: 30, height: 30, borderRadius: 8, border: "none", background: COLORS.accent, color: COLORS.white, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Plus size={14} /></button>
+              <button onClick={() => updateQty(item.id, 1)} style={{ width: 30, height: 30, borderRadius: 8, border: "none", background: COLORS.accent, color: COLORS.bg, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Plus size={14} /></button>
             </div>
           </div>
         ))}
@@ -1188,7 +1188,7 @@ function CustomerApp({ user, orders, setOrders, menu }) {
         </div>
 
         {/* Points Card */}
-        <div style={{ background: `linear-gradient(135deg, ${COLORS.accent}, #C04D1A)`, borderRadius: 14, padding: 24, marginBottom: 20 }}>
+        <div style={{ background: `linear-gradient(135deg, ${COLORS.border}, ${COLORS.surface})`, border: `1px solid ${COLORS.borderLight}`, borderRadius: 14, padding: 24, marginBottom: 20 }}>
           <p style={{ margin: 0, fontSize: 12, opacity: 0.8, textTransform: "uppercase", letterSpacing: 1.5 }}>Momo Points</p>
           <p style={{ margin: "8px 0 4px", fontSize: 32, fontWeight: 700 }}>{user.points}</p>
           <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: 8, height: 6, overflow: "hidden", marginTop: 12 }}>
@@ -1394,7 +1394,7 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onLogout }) {
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             style={{ padding: isMobile ? "10px 14px" : "12px 20px", background: "none", border: "none", borderBottom: `2px solid ${tab === t.id ? COLORS.accent : "transparent"}`, color: tab === t.id ? COLORS.accent : COLORS.textMuted, fontWeight: 600, fontSize: isMobile ? 13 : 14, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
-            {t.label} {t.count > 0 && <span style={{ background: COLORS.accent, color: COLORS.white, borderRadius: 10, padding: "1px 8px", fontSize: 11 }}>{t.count}</span>}
+            {t.label} {t.count > 0 && <span style={{ background: COLORS.accent, color: COLORS.bg, borderRadius: 10, padding: "1px 8px", fontSize: 11 }}>{t.count}</span>}
           </button>
         ))}
       </div>
@@ -1472,7 +1472,7 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onLogout }) {
               <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 120 }}>
                 {[2, 5, 3, 8, 12, 10, 7, 4, 6, 9, 11, 3].map((v, i) => (
                   <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                    <div style={{ width: "100%", height: v * 10, background: `linear-gradient(180deg, ${COLORS.accent}, ${COLORS.accent}66)`, borderRadius: "4px 4px 0 0", transition: "height 0.5s" }} />
+                    <div style={{ width: "100%", height: v * 10, background: `linear-gradient(180deg, ${COLORS.textSecondary}, ${COLORS.textMuted})`, borderRadius: "4px 4px 0 0", transition: "height 0.5s" }} />
                     <span style={{ fontSize: 9, color: COLORS.textMuted }}>{10 + i}</span>
                   </div>
                 ))}
