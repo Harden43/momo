@@ -279,6 +279,180 @@ function AuthView({ onLogin }) {
   );
 }
 
+// --- DELIVERY MAP ---
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+// Fix Leaflet default marker icon paths (broken by bundlers)
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
+
+function DeliveryMap({ address, onAddressChange, onLatLngChange }) {
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markerRef = useRef(null);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const searchTimeout = useRef(null);
+
+  // Initialize map
+  useEffect(() => {
+    if (mapInstanceRef.current) return;
+    const map = L.map(mapRef.current, {
+      center: [43.6532, -79.3832], // Toronto default
+      zoom: 13,
+      zoomControl: false,
+      attributionControl: false,
+    });
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      maxZoom: 19,
+    }).addTo(map);
+    L.control.zoom({ position: "bottomright" }).addTo(map);
+
+    // Click to drop pin
+    map.on("click", (e) => {
+      placeMarker(map, e.latlng.lat, e.latlng.lng);
+      reverseGeocode(e.latlng.lat, e.latlng.lng);
+    });
+
+    mapInstanceRef.current = map;
+
+    return () => {
+      map.remove();
+      mapInstanceRef.current = null;
+      markerRef.current = null;
+    };
+  }, []);
+
+  const placeMarker = (map, lat, lng) => {
+    if (markerRef.current) {
+      markerRef.current.setLatLng([lat, lng]);
+    } else {
+      markerRef.current = L.marker([lat, lng], { draggable: true }).addTo(map);
+      markerRef.current.on("dragend", () => {
+        const pos = markerRef.current.getLatLng();
+        reverseGeocode(pos.lat, pos.lng);
+      });
+    }
+    onLatLngChange(lat, lng);
+  };
+
+  const reverseGeocode = async (lat, lng) => {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
+      const data = await res.json();
+      if (data.display_name) {
+        onAddressChange(data.display_name);
+        setQuery(data.display_name);
+      }
+    } catch (err) {
+      console.error("Reverse geocode error:", err);
+    }
+  };
+
+  const searchAddress = async (q) => {
+    if (q.length < 3) { setResults([]); return; }
+    setSearching(true);
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5&addressdetails=1`);
+      const data = await res.json();
+      setResults(data);
+    } catch (err) {
+      console.error("Search error:", err);
+    }
+    setSearching(false);
+  };
+
+  const handleInputChange = (val) => {
+    setQuery(val);
+    clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => searchAddress(val), 400);
+  };
+
+  const selectResult = (item) => {
+    const lat = parseFloat(item.lat);
+    const lng = parseFloat(item.lon);
+    const map = mapInstanceRef.current;
+    map.setView([lat, lng], 16);
+    placeMarker(map, lat, lng);
+    onAddressChange(item.display_name);
+    setQuery(item.display_name);
+    setResults([]);
+  };
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      <label style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary, display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+        <MapPin size={13} /> Delivery Address
+      </label>
+
+      {/* Search input */}
+      <div style={{ position: "relative", marginBottom: 8 }}>
+        <div style={{ position: "relative" }}>
+          <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", opacity: 0.5 }}>
+            <MapPin size={16} color={COLORS.textMuted} />
+          </span>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => handleInputChange(e.target.value)}
+            placeholder="Search for your address..."
+            style={{
+              width: "100%", padding: "12px 16px 12px 42px", background: COLORS.surface,
+              border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.text,
+              fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box",
+            }}
+          />
+        </div>
+
+        {/* Search results dropdown */}
+        {results.length > 0 && (
+          <div style={{
+            position: "absolute", top: "100%", left: 0, right: 0, zIndex: 30,
+            background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10,
+            marginTop: 4, overflow: "hidden", boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+          }}>
+            {results.map((item, i) => (
+              <div
+                key={i}
+                onClick={() => selectResult(item)}
+                style={{
+                  padding: "10px 14px", cursor: "pointer", fontSize: 13,
+                  color: COLORS.text, borderBottom: i < results.length - 1 ? `1px solid ${COLORS.border}` : "none",
+                  display: "flex", alignItems: "center", gap: 8,
+                  transition: "background 0.15s",
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = COLORS.surfaceHover}
+                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+              >
+                <MapPin size={14} color={COLORS.accent} style={{ flexShrink: 0 }} />
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.display_name}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Map container */}
+      <div
+        ref={mapRef}
+        style={{
+          height: 220, borderRadius: 12, border: `1px solid ${COLORS.border}`,
+          overflow: "hidden", position: "relative", zIndex: 1,
+        }}
+      />
+      <p style={{ margin: "6px 0 0", fontSize: 11, color: COLORS.textMuted }}>
+        Tap the map or search above to set your delivery location
+      </p>
+    </div>
+  );
+}
+
 // --- BOTTOM NAV ---
 const NAV_HEIGHT = 64;
 
@@ -335,7 +509,9 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
   const [activeCategory, setActiveCategory] = useState("all");
   const [screen, setScreen] = useState("menu"); // menu | cart | tracking | profile
   const [specialInstructions, setSpecialInstructions] = useState("");
-  const [deliveryAddress, setDeliveryAddress] = useState("123 Main Street, Toronto, ON");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryLat, setDeliveryLat] = useState(43.6532);
+  const [deliveryLng, setDeliveryLng] = useState(-79.3832);
   const [paymentMethod, setPaymentMethod] = useState("cash");
 
   const filteredItems = menu.filter(i => activeCategory === "all" || i.category === activeCategory);
@@ -367,8 +543,8 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
       payment_status: paymentMethod === "stripe" ? "paid" : "pending",
       special_instructions: specialInstructions,
       delivery_address: deliveryAddress,
-      lat: 43.6532 + (Math.random() - 0.5) * 0.05,
-      lng: -79.3832 + (Math.random() - 0.5) * 0.05,
+      lat: deliveryLat,
+      lng: deliveryLng,
     }).select().single();
 
     if (error) { console.error("Order insert error:", error); return; }
@@ -491,13 +667,11 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
         </div>
 
         {/* Delivery Address */}
-        <div style={{ marginTop: 16 }}>
-          <label style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary, display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}><MapPin size={13} /> Delivery Address</label>
-          <Input value={deliveryAddress} onChange={setDeliveryAddress} placeholder="Enter your address" icon={<Home size={16} />} />
-          <div style={{ marginTop: 8, height: 120, background: COLORS.surface, borderRadius: 10, border: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", justifyContent: "center", color: COLORS.textMuted, fontSize: 13 }}>
-            <Map size={20} color={COLORS.textMuted} /> Map pin drop would appear here
-          </div>
-        </div>
+        <DeliveryMap
+          address={deliveryAddress}
+          onAddressChange={setDeliveryAddress}
+          onLatLngChange={(lat, lng) => { setDeliveryLat(lat); setDeliveryLng(lng); }}
+        />
 
         {/* Payment Method */}
         <div style={{ marginTop: 20 }}>
