@@ -45,26 +45,26 @@ function useIsMobile(breakpoint = 640) {
 }
 
 const COLORS = {
-  bg: "#0A0A0A",
-  surface: "#141414",
-  surfaceHover: "#1C1C1C",
-  card: "#1A1A1A",
-  cardHover: "#222222",
-  border: "#2A2A2A",
-  borderLight: "#333333",
-  accent: "#FF6B35",
-  accentHover: "#FF8555",
-  accentDim: "rgba(255,107,53,0.12)",
-  accentGlow: "rgba(255,107,53,0.25)",
-  success: "#22C55E",
-  successDim: "rgba(34,197,94,0.12)",
-  warning: "#FBBF24",
-  warningDim: "rgba(251,191,36,0.12)",
+  bg: "#0C0C0E",
+  surface: "#161618",
+  surfaceHover: "#1E1E21",
+  card: "#1A1A1D",
+  cardHover: "#222225",
+  border: "#242428",
+  borderLight: "#2E2E33",
+  accent: "#E85A2B",
+  accentHover: "#F06D3F",
+  accentDim: "rgba(232,90,43,0.10)",
+  accentGlow: "rgba(232,90,43,0.20)",
+  success: "#10B981",
+  successDim: "rgba(16,185,129,0.10)",
+  warning: "#F59E0B",
+  warningDim: "rgba(245,158,11,0.10)",
   danger: "#EF4444",
-  dangerDim: "rgba(239,68,68,0.12)",
-  text: "#F5F5F5",
-  textSecondary: "#999999",
-  textMuted: "#666666",
+  dangerDim: "rgba(239,68,68,0.10)",
+  text: "#ECECEF",
+  textSecondary: "#8E8E93",
+  textMuted: "#5A5A5E",
   white: "#FFFFFF",
 };
 
@@ -99,15 +99,15 @@ const generateOrderNumber = () => `MOMO-${String(Math.floor(1000 + Math.random()
 
 function Badge({ children, color, bg, style }) {
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600, color: color || COLORS.accent, background: bg || COLORS.accentDim, letterSpacing: 0.3, ...style }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 500, color: color || COLORS.accent, background: bg || COLORS.accentDim, letterSpacing: 0.4, ...style }}>
       {children}
     </span>
   );
 }
 
 function Button({ children, onClick, variant = "primary", size = "md", disabled, style, fullWidth }) {
-  const base = { border: "none", borderRadius: 10, fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer", transition: "all 0.2s", fontFamily: "inherit", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: disabled ? 0.5 : 1, width: fullWidth ? "100%" : "auto" };
-  const sizes = { sm: { padding: "8px 14px", fontSize: 13 }, md: { padding: "12px 20px", fontSize: 14 }, lg: { padding: "14px 28px", fontSize: 15 } };
+  const base = { border: "none", borderRadius: 12, fontWeight: 500, cursor: disabled ? "not-allowed" : "pointer", transition: "all 0.2s", fontFamily: "inherit", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: disabled ? 0.5 : 1, width: fullWidth ? "100%" : "auto" };
+  const sizes = { sm: { padding: "8px 14px", fontSize: 13 }, md: { padding: "12px 20px", fontSize: 14 }, lg: { padding: "16px 28px", fontSize: 15 } };
   const variants = {
     primary: { background: COLORS.accent, color: COLORS.white },
     secondary: { background: COLORS.surface, color: COLORS.text, border: `1px solid ${COLORS.border}` },
@@ -123,7 +123,7 @@ function Input({ value, onChange, placeholder, type = "text", style, icon }) {
     <div style={{ position: "relative", width: "100%" }}>
       {icon && <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 16, opacity: 0.5 }}>{icon}</span>}
       <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-        style={{ width: "100%", padding: icon ? "12px 16px 12px 42px" : "12px 16px", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.text, fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box", ...style }}
+        style={{ width: "100%", padding: icon ? "14px 16px 14px 42px" : "14px 16px", background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.text, fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box", ...style }}
       />
     </div>
   );
@@ -222,11 +222,11 @@ function AuthView({ onLogin }) {
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.bg, padding: 20 }}>
       <div style={{ width: "100%", maxWidth: 420, textAlign: "center" }}>
-        <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}><UtensilsCrossed size={56} color={COLORS.accent} strokeWidth={1.5} /></div>
-        <h1 style={{ fontSize: 32, fontWeight: 800, color: COLORS.text, margin: 0, letterSpacing: -0.5 }}>MomoGhar</h1>
-        <p style={{ color: COLORS.textSecondary, margin: "8px 0 40px", fontSize: 15, letterSpacing: 0.5 }}>Homemade Nepali Momos • Fresh to Your Door</p>
+        <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}><UtensilsCrossed size={48} color={COLORS.accent} strokeWidth={1.5} /></div>
+        <h1 style={{ fontSize: 28, fontWeight: 700, color: COLORS.text, margin: 0, letterSpacing: -0.5 }}>MomoGhar</h1>
+        <p style={{ color: COLORS.textSecondary, margin: "8px 0 40px", fontSize: 14, letterSpacing: 0.5 }}>Homemade Nepali Momos • Fresh to Your Door</p>
 
-        <div style={{ background: COLORS.card, borderRadius: 20, padding: "28px 20px", border: `1px solid ${COLORS.border}` }}>
+        <div style={{ background: COLORS.card, borderRadius: 16, padding: "32px 24px", border: `1px solid ${COLORS.border}` }}>
           {step === "phone" && (
             <>
               <p style={{ color: COLORS.textSecondary, fontSize: 14, margin: "0 0 20px" }}>Enter your phone number to get started</p>
@@ -253,7 +253,7 @@ function AuthView({ onLogin }) {
                     ref={inputRefs[i]}
                     maxLength={1}
                     inputMode="numeric"
-                    style={{ width: 40, height: 50, textAlign: "center", fontSize: 20, fontWeight: 700, background: COLORS.surface, border: `2px solid ${otp[i] ? COLORS.accent : error ? COLORS.danger : COLORS.border}`, borderRadius: 10, color: COLORS.text, outline: "none", fontFamily: "inherit", transition: "border-color 0.2s", flex: "0 1 44px" }}
+                    style={{ width: 40, height: 50, textAlign: "center", fontSize: 20, fontWeight: 600, background: COLORS.surface, border: `2px solid ${otp[i] ? COLORS.accent : error ? COLORS.danger : COLORS.border}`, borderRadius: 12, color: COLORS.text, outline: "none", fontFamily: "inherit", transition: "border-color 0.2s", flex: "0 1 44px" }}
                     value={otp[i]}
                     onChange={e => handleOtpChange(i, e.target.value)}
                     onKeyDown={e => handleOtpKeyDown(i, e)}
@@ -600,7 +600,7 @@ function StripePaymentSheet({ open, clientSecret, amount, onSuccess, onClose }) 
           colorBackground: COLORS.surface,
           colorText: COLORS.text,
           colorDanger: COLORS.danger,
-          borderRadius: "10px",
+          borderRadius: "12px",
           fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif",
         },
       },
@@ -719,7 +719,7 @@ function OrderTrackingMap({ order }) {
           backdropFilter: "blur(8px)",
         }}>
           <p style={{ margin: 0, fontSize: 11, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5 }}>{etaInfo.label}</p>
-          <p style={{ margin: "2px 0 0", fontSize: 22, fontWeight: 800, color: COLORS.text }}>
+          <p style={{ margin: "2px 0 0", fontSize: 22, fontWeight: 700, color: COLORS.text }}>
             {etaInfo.time} <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary }}>min</span>
           </p>
           {routeDistance && (
@@ -739,7 +739,7 @@ function OrderTrackingMap({ order }) {
             boxShadow: "0 4px 12px rgba(0,0,0,0.4)", backdropFilter: "blur(8px)",
           }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: config.color }} />
-            <span style={{ fontSize: 12, fontWeight: 700, color: config.color }}>{config.label}</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: config.color }}>{config.label}</span>
           </div>
         );
       })()}
@@ -798,13 +798,13 @@ function BottomNav({ active, onNavigate, cartCount }) {
                 <span style={{
                   position: "absolute", top: -6, right: -10,
                   background: COLORS.accent, color: COLORS.white,
-                  fontSize: 10, fontWeight: 800, borderRadius: 10,
+                  fontSize: 10, fontWeight: 700, borderRadius: 10,
                   minWidth: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center",
                   padding: "0 4px",
                 }}>{tab.badge}</span>
               )}
             </div>
-            <span style={{ fontSize: 10, fontWeight: isActive ? 700 : 500 }}>{tab.label}</span>
+            <span style={{ fontSize: 10, fontWeight: isActive ? 600 : 400 }}>{tab.label}</span>
           </button>
         );
       })}
@@ -934,7 +934,7 @@ function CustomerApp({ user, orders, setOrders, menu }) {
       {/* Header */}
       <div style={{ padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${COLORS.border}`, position: "sticky", top: 0, background: COLORS.bg, zIndex: 10 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}><UtensilsCrossed size={20} color={COLORS.accent} strokeWidth={2} /> MomoGhar</h1>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}><UtensilsCrossed size={20} color={COLORS.accent} strokeWidth={1.5} /> MomoGhar</h1>
           <p style={{ margin: 0, fontSize: 12, color: COLORS.textMuted }}>Open • Delivery in ~30 min</p>
         </div>
         <Badge color={COLORS.accent} bg={COLORS.accentDim}><Star size={12} /> {user.points} pts</Badge>
@@ -944,7 +944,7 @@ function CustomerApp({ user, orders, setOrders, menu }) {
       <div className="hide-scrollbar" style={{ padding: "8px 20px", display: "flex", gap: 8, overflowX: "auto" }}>
         {CATEGORIES.map(cat => (
           <button key={cat.id} onClick={() => setActiveCategory(cat.id)}
-            style={{ padding: "8px 16px", borderRadius: 20, border: activeCategory === cat.id ? `1px solid ${COLORS.accent}` : `1px solid ${COLORS.border}`, background: activeCategory === cat.id ? COLORS.accentDim : "transparent", color: activeCategory === cat.id ? COLORS.accent : COLORS.textSecondary, fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+            style={{ padding: "8px 16px", borderRadius: 10, border: activeCategory === cat.id ? `1px solid ${COLORS.accent}` : `1px solid ${COLORS.border}`, background: activeCategory === cat.id ? COLORS.accentDim : "transparent", color: activeCategory === cat.id ? COLORS.accent : COLORS.textSecondary, fontSize: 13, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
             <cat.Icon size={14} /> {cat.label}
           </button>
         ))}
@@ -955,13 +955,13 @@ function CustomerApp({ user, orders, setOrders, menu }) {
         {filteredItems.map(item => {
           const inCart = cart.find(c => c.id === item.id);
           return (
-            <div key={item.id} style={{ background: COLORS.card, borderRadius: 14, border: `1px solid ${COLORS.border}`, overflow: "hidden", opacity: item.isAvailable ? 1 : 0.5, transition: "all 0.2s" }}>
+            <div key={item.id} style={{ background: COLORS.card, borderRadius: 12, border: `1px solid ${COLORS.border}`, overflow: "hidden", opacity: item.isAvailable ? 1 : 0.5, transition: "all 0.2s" }}>
               <div style={{ padding: 16, display: "flex", gap: 14, alignItems: "flex-start" }}>
-                <div style={{ width: 44, height: 44, borderRadius: 10, background: COLORS.accentDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><MenuItemIcon category={item.category} size={24} color={COLORS.accent} /></div>
+                <div style={{ width: 48, height: 48, borderRadius: 12, background: COLORS.accentDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><MenuItemIcon category={item.category} size={24} color={COLORS.accent} /></div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>{item.name}</h3>
-                    <span style={{ fontWeight: 800, color: COLORS.accent, fontSize: 16 }}>${item.price}</span>
+                    <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{item.name}</h3>
+                    <span style={{ fontWeight: 600, color: COLORS.accent, fontSize: 15 }}>${item.price}</span>
                   </div>
                   <p style={{ margin: "4px 0 0", fontSize: 12, color: COLORS.textSecondary, lineHeight: 1.4 }}>{item.description}</p>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
@@ -971,7 +971,7 @@ function CustomerApp({ user, orders, setOrders, menu }) {
                     ) : inCart ? (
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <button onClick={() => updateQty(item.id, -1)} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${COLORS.border}`, background: COLORS.surface, color: COLORS.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Minus size={14} /></button>
-                        <span style={{ fontWeight: 700, fontSize: 14, minWidth: 20, textAlign: "center" }}>{inCart.qty}</span>
+                        <span style={{ fontWeight: 600, fontSize: 14, minWidth: 20, textAlign: "center" }}>{inCart.qty}</span>
                         <button onClick={() => updateQty(item.id, 1)} style={{ width: 30, height: 30, borderRadius: 8, border: "none", background: COLORS.accent, color: COLORS.white, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Plus size={14} /></button>
                       </div>
                     ) : (
@@ -993,7 +993,7 @@ function CustomerApp({ user, orders, setOrders, menu }) {
   if (screen === "cart") return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text }}>
       <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, borderBottom: `1px solid ${COLORS.border}`, position: "sticky", top: 0, background: COLORS.bg, zIndex: 10 }}>
-        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Your Cart</h2>
+        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>Your Cart</h2>
         <Badge>{cart.length} items</Badge>
       </div>
 
@@ -1004,13 +1004,13 @@ function CustomerApp({ user, orders, setOrders, menu }) {
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
               <div style={{ width: 36, height: 36, borderRadius: 8, background: COLORS.accentDim, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><MenuItemIcon category={item.category} size={18} color={COLORS.accent} /></div>
               <div>
-                <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{item.name}</p>
+                <p style={{ margin: 0, fontWeight: 500, fontSize: 14 }}>{item.name}</p>
                 <p style={{ margin: "2px 0 0", color: COLORS.textMuted, fontSize: 13 }}>${item.price} each</p>
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <button onClick={() => updateQty(item.id, -1)} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${COLORS.border}`, background: COLORS.surface, color: COLORS.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Minus size={14} /></button>
-              <span style={{ fontWeight: 700, minWidth: 20, textAlign: "center" }}>{item.qty}</span>
+              <span style={{ fontWeight: 600, minWidth: 20, textAlign: "center" }}>{item.qty}</span>
               <button onClick={() => updateQty(item.id, 1)} style={{ width: 30, height: 30, borderRadius: 8, border: "none", background: COLORS.accent, color: COLORS.white, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Plus size={14} /></button>
             </div>
           </div>
@@ -1022,8 +1022,8 @@ function CustomerApp({ user, orders, setOrders, menu }) {
           <div style={{ display: "flex", gap: 10 }}>
             {[{ id: "cash", label: "Cash", desc: "Pay on delivery", Icon: Banknote }, { id: "stripe", label: "Card", desc: "Pay now via Stripe", Icon: CreditCard }].map(pm => (
               <div key={pm.id} onClick={() => setPaymentMethod(pm.id)}
-                style={{ flex: 1, padding: 14, borderRadius: 12, border: `2px solid ${paymentMethod === pm.id ? COLORS.accent : COLORS.border}`, background: paymentMethod === pm.id ? COLORS.accentDim : COLORS.surface, cursor: "pointer", textAlign: "center", transition: "all 0.2s" }}>
-                <p style={{ margin: 0, fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><pm.Icon size={16} /> {pm.label}</p>
+                style={{ flex: 1, padding: 14, borderRadius: 12, border: `1.5px solid ${paymentMethod === pm.id ? COLORS.accent : COLORS.border}`, background: paymentMethod === pm.id ? COLORS.accentDim : COLORS.surface, cursor: "pointer", textAlign: "center", transition: "all 0.2s" }}>
+                <p style={{ margin: 0, fontWeight: 600, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><pm.Icon size={16} /> {pm.label}</p>
                 <p style={{ margin: "4px 0 0", fontSize: 11, color: COLORS.textMuted }}>{pm.desc}</p>
               </div>
             ))}
@@ -1031,7 +1031,7 @@ function CustomerApp({ user, orders, setOrders, menu }) {
         </div>
 
         {/* Order Summary */}
-        <div style={{ marginTop: 24, padding: 20, background: COLORS.card, borderRadius: 14, border: `1px solid ${COLORS.border}` }}>
+        <div style={{ marginTop: 24, padding: 20, background: COLORS.card, borderRadius: 12, border: `1px solid ${COLORS.border}` }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
             <span style={{ color: COLORS.textSecondary, fontSize: 14 }}>Subtotal</span>
             <span style={{ fontWeight: 600 }}>${cartTotal.toFixed(2)}</span>
@@ -1041,8 +1041,8 @@ function CustomerApp({ user, orders, setOrders, menu }) {
             <span style={{ fontWeight: 600, color: deliveryFee === 0 ? COLORS.success : COLORS.text }}>{deliveryFee === 0 ? "Free" : `$${deliveryFee.toFixed(2)}`}</span>
           </div>
           <div style={{ borderTop: `1px solid ${COLORS.border}`, paddingTop: 12, marginTop: 8, display: "flex", justifyContent: "space-between" }}>
-            <span style={{ fontWeight: 800, fontSize: 16 }}>Total</span>
-            <span style={{ fontWeight: 800, fontSize: 18, color: COLORS.accent }}>${(cartTotal + deliveryFee).toFixed(2)}</span>
+            <span style={{ fontWeight: 700, fontSize: 15 }}>Total</span>
+            <span style={{ fontWeight: 700, fontSize: 16, color: COLORS.accent }}>${(cartTotal + deliveryFee).toFixed(2)}</span>
           </div>
           <p style={{ margin: "8px 0 0", fontSize: 12, color: COLORS.success, display: "flex", alignItems: "center", gap: 4 }}><Gift size={12} /> You'll earn {Math.floor((cartTotal + deliveryFee) * 10)} points with this order!</p>
         </div>
@@ -1129,10 +1129,10 @@ function CustomerApp({ user, orders, setOrders, menu }) {
             const statusIdx = ORDER_STATUSES.indexOf(order.status);
             const config = STATUS_CONFIG[order.status];
             return (
-              <div key={order.id} style={{ background: COLORS.card, borderRadius: 14, border: `1px solid ${COLORS.border}`, padding: 20, marginBottom: 12 }}>
+              <div key={order.id} style={{ background: COLORS.card, borderRadius: 12, border: `1px solid ${COLORS.border}`, padding: 20, marginBottom: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                   <div>
-                    <span style={{ fontWeight: 700, fontSize: 15 }}>{order.orderNumber}</span>
+                    <span style={{ fontWeight: 600, fontSize: 15 }}>{order.orderNumber}</span>
                     <span style={{ fontSize: 12, color: COLORS.textMuted, marginLeft: 8 }}>{new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                   <Badge color={config.color} bg={config.bg}><config.Icon size={12} /> {config.label}</Badge>
@@ -1162,8 +1162,8 @@ function CustomerApp({ user, orders, setOrders, menu }) {
                   </div>
                 ))}
                 <div style={{ borderTop: `1px solid ${COLORS.border}`, marginTop: 8, paddingTop: 8, display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ fontWeight: 700, fontSize: 14 }}>Total</span>
-                  <span style={{ fontWeight: 700, color: COLORS.accent }}>${order.total.toFixed(2)}</span>
+                  <span style={{ fontWeight: 600, fontSize: 14 }}>Total</span>
+                  <span style={{ fontWeight: 600, color: COLORS.accent }}>${order.total.toFixed(2)}</span>
                 </div>
               </div>
             );
@@ -1183,14 +1183,14 @@ function CustomerApp({ user, orders, setOrders, menu }) {
       <div style={{ padding: 20, maxWidth: 500, margin: "0 auto" }}>
         <div style={{ textAlign: "center", padding: "32px 0" }}>
           <div style={{ width: 80, height: 80, borderRadius: "50%", background: COLORS.accentDim, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}><User size={36} color={COLORS.accent} /></div>
-          <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{user.name}</h3>
+          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>{user.name}</h3>
           <p style={{ margin: "4px 0", color: COLORS.textMuted }}>{user.phone}</p>
         </div>
 
         {/* Points Card */}
-        <div style={{ background: `linear-gradient(135deg, ${COLORS.accent}, #C04D1A)`, borderRadius: 16, padding: 24, marginBottom: 20 }}>
+        <div style={{ background: `linear-gradient(135deg, ${COLORS.accent}, #C04D1A)`, borderRadius: 14, padding: 24, marginBottom: 20 }}>
           <p style={{ margin: 0, fontSize: 12, opacity: 0.8, textTransform: "uppercase", letterSpacing: 1.5 }}>Momo Points</p>
-          <p style={{ margin: "8px 0 4px", fontSize: 36, fontWeight: 800 }}>{user.points}</p>
+          <p style={{ margin: "8px 0 4px", fontSize: 32, fontWeight: 700 }}>{user.points}</p>
           <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: 8, height: 6, overflow: "hidden", marginTop: 12 }}>
             <div style={{ background: "white", height: "100%", width: `${Math.min(100, (user.points / 1000) * 100)}%`, borderRadius: 8, transition: "width 0.5s" }} />
           </div>
@@ -1243,11 +1243,11 @@ function DashboardLogin({ onLogin }) {
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.bg, padding: 20 }}>
       <div style={{ width: "100%", maxWidth: 420, textAlign: "center" }}>
-        <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}><UtensilsCrossed size={56} color={COLORS.accent} strokeWidth={1.5} /></div>
-        <h1 style={{ fontSize: 32, fontWeight: 800, color: COLORS.text, margin: 0, letterSpacing: -0.5 }}>MomoGhar</h1>
+        <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}><UtensilsCrossed size={48} color={COLORS.accent} strokeWidth={1.5} /></div>
+        <h1 style={{ fontSize: 28, fontWeight: 700, color: COLORS.text, margin: 0, letterSpacing: -0.5 }}>MomoGhar</h1>
         <p style={{ color: COLORS.textSecondary, margin: "8px 0 40px", fontSize: 15, letterSpacing: 0.5 }}>Kitchen Dashboard</p>
 
-        <div style={{ background: COLORS.card, borderRadius: 20, padding: "28px 20px", border: `1px solid ${COLORS.border}` }}>
+        <div style={{ background: COLORS.card, borderRadius: 16, padding: "28px 20px", border: `1px solid ${COLORS.border}` }}>
           <p style={{ color: COLORS.textSecondary, fontSize: 14, margin: "0 0 20px" }}>Enter owner password to continue</p>
           <Input
             value={password}
@@ -1308,7 +1308,7 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onLogout }) {
       <div style={{ background: COLORS.card, borderRadius: 14, border: `1px solid ${COLORS.border}`, padding: 18, marginBottom: 10, borderLeft: `4px solid ${config.color}` }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
           <div>
-            <span style={{ fontWeight: 800, fontSize: 16 }}>{order.orderNumber}</span>
+            <span style={{ fontWeight: 700, fontSize: 16 }}>{order.orderNumber}</span>
             <span style={{ fontSize: 12, color: COLORS.textMuted, marginLeft: 10 }}>{order.userName}</span>
           </div>
           <Badge color={config.color} bg={config.bg}><config.Icon size={12} /> {config.label}</Badge>
@@ -1328,7 +1328,7 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onLogout }) {
 
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 10, borderTop: `1px solid ${COLORS.border}`, gap: 8 }}>
           <div>
-            <span style={{ fontWeight: 800, color: COLORS.accent, fontSize: 16 }}>${order.total.toFixed(2)}</span>
+            <span style={{ fontWeight: 700, color: COLORS.accent, fontSize: 16 }}>${order.total.toFixed(2)}</span>
             <span style={{ fontSize: 11, color: COLORS.textMuted, marginLeft: 8, display: "inline-flex", alignItems: "center", gap: 4 }}>{order.paymentMethod === "cash" ? <><Banknote size={11} /> Cash</> : <><CreditCard size={11} /> Paid</>}</span>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -1358,7 +1358,7 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onLogout }) {
       {/* Dashboard Header */}
       <div style={{ padding: isMobile ? "12px 16px" : "14px 24px", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8, borderBottom: `1px solid ${COLORS.border}`, background: COLORS.surface }}>
         <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 14, flexWrap: "wrap" }}>
-          <h1 style={{ margin: 0, fontSize: isMobile ? 16 : 20, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}><UtensilsCrossed size={isMobile ? 16 : 20} color={COLORS.accent} strokeWidth={2} /> Kitchen</h1>
+          <h1 style={{ margin: 0, fontSize: isMobile ? 16 : 20, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}><UtensilsCrossed size={isMobile ? 16 : 20} color={COLORS.accent} strokeWidth={2} /> Kitchen</h1>
           <div onClick={() => setIsOpen(!isOpen)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 20, background: isOpen ? COLORS.successDim : COLORS.dangerDim, border: `1px solid ${isOpen ? COLORS.success : COLORS.danger}44`, cursor: "pointer" }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: isOpen ? COLORS.success : COLORS.danger }} />
             <span style={{ fontSize: 11, fontWeight: 600, color: isOpen ? COLORS.success : COLORS.danger }}>{isOpen ? "Open" : "Closed"}</span>
