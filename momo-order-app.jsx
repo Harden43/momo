@@ -813,7 +813,7 @@ function BottomNav({ active, onNavigate, cartCount }) {
 }
 
 // --- CUSTOMER APP ---
-function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
+function CustomerApp({ user, orders, setOrders, menu }) {
   const [cart, setCart] = useState([]);
   const [activeCategory, setActiveCategory] = useState("all");
   const [screen, setScreen] = useState("menu"); // menu | cart | tracking | profile
@@ -1211,7 +1211,10 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
           </div>
         ))}
 
-        <Button variant="danger" fullWidth style={{ marginTop: 24, marginBottom: NAV_HEIGHT + 16 }} onClick={onSwitchView}>Switch to Dashboard</Button>
+        <Button variant="danger" fullWidth style={{ marginTop: 24, marginBottom: NAV_HEIGHT + 16 }} onClick={() => {
+          localStorage.removeItem("momoghar_user");
+          window.location.reload();
+        }}>Log Out</Button>
       </div>
       <BottomNav active="profile" onNavigate={setScreen} cartCount={cartCount} />
     </div>
@@ -1219,9 +1222,54 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
 }
 
 // ============================================================
+// DASHBOARD LOGIN
+// ============================================================
+const DASHBOARD_PASSWORD = import.meta.env.VITE_DASHBOARD_PASSWORD || "momoghar123";
+
+function DashboardLogin({ onLogin }) {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  const handleLogin = () => {
+    if (password === DASHBOARD_PASSWORD) {
+      sessionStorage.setItem("dashboard_auth", "true");
+      onLogin();
+    } else {
+      setError("Incorrect password");
+      setPassword("");
+    }
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.bg, padding: 20 }}>
+      <div style={{ width: "100%", maxWidth: 420, textAlign: "center" }}>
+        <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}><UtensilsCrossed size={56} color={COLORS.accent} strokeWidth={1.5} /></div>
+        <h1 style={{ fontSize: 32, fontWeight: 800, color: COLORS.text, margin: 0, letterSpacing: -0.5 }}>MomoGhar</h1>
+        <p style={{ color: COLORS.textSecondary, margin: "8px 0 40px", fontSize: 15, letterSpacing: 0.5 }}>Kitchen Dashboard</p>
+
+        <div style={{ background: COLORS.card, borderRadius: 20, padding: "28px 20px", border: `1px solid ${COLORS.border}` }}>
+          <p style={{ color: COLORS.textSecondary, fontSize: 14, margin: "0 0 20px" }}>Enter owner password to continue</p>
+          <Input
+            value={password}
+            onChange={(val) => { setPassword(val); setError(""); }}
+            placeholder="Password"
+            type="password"
+            icon={<Settings size={16} />}
+          />
+          {error && <p style={{ color: COLORS.danger, fontSize: 13, margin: "10px 0 0", fontWeight: 600 }}>{error}</p>}
+          <Button onClick={handleLogin} fullWidth style={{ marginTop: 16 }} disabled={!password}>
+            <Settings size={16} /> Access Dashboard
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // KITCHEN DASHBOARD
 // ============================================================
-function KitchenDashboard({ orders, setOrders, menu, setMenu, onSwitchView }) {
+function KitchenDashboard({ orders, setOrders, menu, setMenu, onLogout }) {
   const isMobile = useIsMobile();
   const [tab, setTab] = useState("orders"); // orders | menu | analytics
   const [isOpen, setIsOpen] = useState(true);
@@ -1316,7 +1364,7 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onSwitchView }) {
             <span style={{ fontSize: 11, fontWeight: 600, color: isOpen ? COLORS.success : COLORS.danger }}>{isOpen ? "Open" : "Closed"}</span>
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={onSwitchView}><ArrowLeft size={14} /> Customer</Button>
+        <Button variant="danger" size="sm" onClick={onLogout}><ArrowLeft size={14} /> Logout</Button>
       </div>
 
       {/* Stats Bar */}
@@ -1479,18 +1527,27 @@ function normalizeMenuItem(row) {
 // MAIN APP
 // ============================================================
 export default function App() {
-  const [user, setUser] = useState(null); // { id, name, phone, points }
-  const [view, setView] = useState("customer"); // customer | dashboard
+  const [user, setUser] = useState(null);
+  const [isDashboard, setIsDashboard] = useState(window.location.hash === "#dashboard");
+  const [dashboardAuthed, setDashboardAuthed] = useState(() => sessionStorage.getItem("dashboard_auth") === "true");
   const [orders, setOrders] = useState([]);
   const [menu, setMenu] = useState([]);
 
-  // 1. Restore user from localStorage on mount
+  // Listen for hash changes
   useEffect(() => {
-    const saved = localStorage.getItem("momoghar_user");
-    if (saved) setUser(JSON.parse(saved));
+    const handler = () => setIsDashboard(window.location.hash === "#dashboard");
+    window.addEventListener("hashchange", handler);
+    return () => window.removeEventListener("hashchange", handler);
   }, []);
 
-  // 2. Load menu from DB
+  // Restore user from localStorage on mount (customer only)
+  useEffect(() => {
+    if (isDashboard) return;
+    const saved = localStorage.getItem("momoghar_user");
+    if (saved) setUser(JSON.parse(saved));
+  }, [isDashboard]);
+
+  // Load menu from DB
   useEffect(() => {
     const fetchMenu = async () => {
       const { data } = await supabase.from("menu_items").select("*").order("created_at");
@@ -1499,9 +1556,10 @@ export default function App() {
     fetchMenu();
   }, []);
 
-  // 3. Load orders from DB when user is set
+  // Load orders from DB (for customer when user set, or for dashboard when authed)
   useEffect(() => {
-    if (!user) return;
+    if (!isDashboard && !user) return;
+    if (isDashboard && !dashboardAuthed) return;
 
     const fetchOrders = async () => {
       const { data } = await supabase
@@ -1511,11 +1569,12 @@ export default function App() {
       if (data) setOrders(data.map(normalizeOrder));
     };
     fetchOrders();
-  }, [user]);
+  }, [user, isDashboard, dashboardAuthed]);
 
-  // 4. Real-time subscription for orders
+  // Real-time subscription for orders
   useEffect(() => {
-    if (!user) return;
+    if (!isDashboard && !user) return;
+    if (isDashboard && !dashboardAuthed) return;
 
     const channel = supabase
       .channel("orders-realtime")
@@ -1540,15 +1599,31 @@ export default function App() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user]);
+  }, [user, isDashboard, dashboardAuthed]);
 
+  // --- DASHBOARD MODE ---
+  if (isDashboard) {
+    if (!dashboardAuthed) {
+      return <DashboardLogin onLogin={() => setDashboardAuthed(true)} />;
+    }
+    return (
+      <KitchenDashboard
+        orders={orders}
+        setOrders={setOrders}
+        menu={menu}
+        setMenu={setMenu}
+        onLogout={() => {
+          sessionStorage.removeItem("dashboard_auth");
+          setDashboardAuthed(false);
+        }}
+      />
+    );
+  }
+
+  // --- CUSTOMER MODE ---
   if (!user) {
     return <AuthView onLogin={(userData) => setUser(userData)} />;
   }
 
-  if (view === "dashboard") {
-    return <KitchenDashboard orders={orders} setOrders={setOrders} menu={menu} setMenu={setMenu} onSwitchView={() => setView("customer")} />;
-  }
-
-  return <CustomerApp user={user} orders={orders} setOrders={setOrders} menu={menu} onSwitchView={() => setView("dashboard")} />;
+  return <CustomerApp user={user} orders={orders} setOrders={setOrders} menu={menu} />;
 }
