@@ -934,10 +934,14 @@ function CustomerApp({ user, orders, setOrders, menu, storeOpen }) {
   const [orderLoading, setOrderLoading] = useState(false);
   const [orderError, setOrderError] = useState("");
 
+  const syncUser = (updates) => {
+    supabase.from("users").upsert({ id: user.id, name: user.name, phone: user.phone, points: user.points || 0, ...updates }, { onConflict: "id" }).then();
+  };
+
   const saveUserAddress = (addr, lat, lng) => {
     const updated = { ...user, address: addr, addressLat: lat, addressLng: lng };
     localStorage.setItem("momoghar_user", JSON.stringify(updated));
-    supabase.from("users").update({ address: addr, address_lat: lat, address_lng: lng }).eq("id", user.id).then();
+    syncUser({ address: addr, address_lat: lat, address_lng: lng });
   };
 
   const filteredItems = menu.filter(i => activeCategory === "all" || i.category === activeCategory);
@@ -999,7 +1003,7 @@ function CustomerApp({ user, orders, setOrders, menu, storeOpen }) {
     const updated = { ...user, points: newPoints };
     localStorage.setItem("momoghar_user", JSON.stringify(updated));
     Object.assign(user, updated);
-    supabase.from("users").update({ points: newPoints }).eq("id", user.id).then();
+    syncUser({ points: newPoints });
 
     setCart([]);
     setSpecialInstructions("");
@@ -1340,7 +1344,7 @@ function CustomerApp({ user, orders, setOrders, menu, storeOpen }) {
                   const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
                   const updated = { ...user, avatar: dataUrl };
                   localStorage.setItem("momoghar_user", JSON.stringify(updated));
-                  supabase.from("users").update({ avatar: dataUrl }).eq("id", user.id).then();
+                  syncUser({ avatar: dataUrl });
                   window.location.reload();
                 };
                 img.src = reader.result;
