@@ -5,6 +5,18 @@ import { supabase } from "./src/supabaseClient";
 // MOMO ORDER - Home Kitchen Ordering Platform
 // ============================================================
 
+function useIsMobile(breakpoint = 640) {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < breakpoint);
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    setIsMobile(mq.matches);
+    return () => mq.removeEventListener("change", handler);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 const COLORS = {
   bg: "#0A0A0A",
   surface: "#141414",
@@ -187,7 +199,7 @@ function AuthView({ onLogin }) {
         <h1 style={{ fontSize: 36, fontWeight: 800, color: COLORS.text, margin: 0, fontFamily: "'Playfair Display', serif", letterSpacing: -1 }}>MomoGhar</h1>
         <p style={{ color: COLORS.textSecondary, margin: "8px 0 40px", fontSize: 15, letterSpacing: 0.5 }}>Homemade Nepali Momos • Fresh to Your Door</p>
 
-        <div style={{ background: COLORS.card, borderRadius: 20, padding: 32, border: `1px solid ${COLORS.border}` }}>
+        <div style={{ background: COLORS.card, borderRadius: 20, padding: "28px 20px", border: `1px solid ${COLORS.border}` }}>
           {step === "phone" && (
             <>
               <p style={{ color: COLORS.textSecondary, fontSize: 14, margin: "0 0 20px" }}>Enter your phone number to get started</p>
@@ -207,14 +219,14 @@ function AuthView({ onLogin }) {
                 <span style={{ color: COLORS.text, fontWeight: 700 }}>Your MomoGhar code is <span style={{ color: COLORS.accent, letterSpacing: 2, fontSize: 16 }}>{generatedOtp}</span></span>
               </div>
 
-              <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 8 }}>
+              <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 8 }}>
                 {Array.from({ length: OTP_LENGTH }, (_, i) => (
                   <input
                     key={i}
                     ref={inputRefs[i]}
                     maxLength={1}
                     inputMode="numeric"
-                    style={{ width: 44, height: 56, textAlign: "center", fontSize: 22, fontWeight: 700, background: COLORS.surface, border: `2px solid ${otp[i] ? COLORS.accent : error ? COLORS.danger : COLORS.border}`, borderRadius: 10, color: COLORS.text, outline: "none", fontFamily: "inherit", transition: "border-color 0.2s" }}
+                    style={{ width: 40, height: 50, textAlign: "center", fontSize: 20, fontWeight: 700, background: COLORS.surface, border: `2px solid ${otp[i] ? COLORS.accent : error ? COLORS.danger : COLORS.border}`, borderRadius: 10, color: COLORS.text, outline: "none", fontFamily: "inherit", transition: "border-color 0.2s", flex: "0 1 44px" }}
                     value={otp[i]}
                     onChange={e => handleOtpChange(i, e.target.value)}
                     onKeyDown={e => handleOtpKeyDown(i, e)}
@@ -334,7 +346,7 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
       </div>
 
       {/* Categories */}
-      <div style={{ padding: "8px 20px", display: "flex", gap: 8, overflowX: "auto" }}>
+      <div className="hide-scrollbar" style={{ padding: "8px 20px", display: "flex", gap: 8, overflowX: "auto" }}>
         {CATEGORIES.map(cat => (
           <button key={cat.id} onClick={() => setActiveCategory(cat.id)}
             style={{ padding: "8px 16px", borderRadius: 20, border: activeCategory === cat.id ? `1px solid ${COLORS.accent}` : `1px solid ${COLORS.border}`, background: activeCategory === cat.id ? COLORS.accentDim : "transparent", color: activeCategory === cat.id ? COLORS.accent : COLORS.textSecondary, fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
@@ -344,7 +356,7 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
       </div>
 
       {/* Menu Grid */}
-      <div style={{ padding: "16px 20px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12, paddingBottom: cartCount > 0 ? 100 : 20 }}>
+      <div style={{ padding: "16px 20px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(280px, 100%), 1fr))", gap: 12, paddingBottom: cartCount > 0 ? 100 : 20 }}>
         {filteredItems.map(item => {
           const inCart = cart.find(c => c.id === item.id);
           return (
@@ -380,7 +392,7 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
 
       {/* Floating Cart Bar */}
       {cartCount > 0 && (
-        <div onClick={() => setScreen("cart")} style={{ position: "fixed", bottom: 16, left: 16, right: 16, maxWidth: 600, margin: "0 auto", padding: "14px 20px", background: COLORS.accent, borderRadius: 14, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", boxShadow: `0 8px 32px ${COLORS.accentGlow}`, zIndex: 20 }}>
+        <div onClick={() => setScreen("cart")} style={{ position: "fixed", bottom: "calc(16px + env(safe-area-inset-bottom, 0px))", left: 16, right: 16, maxWidth: 600, margin: "0 auto", padding: "14px 20px", background: COLORS.accent, borderRadius: 14, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", boxShadow: `0 8px 32px ${COLORS.accentGlow}`, zIndex: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ background: "rgba(255,255,255,0.2)", borderRadius: 8, padding: "4px 10px", fontWeight: 800, fontSize: 14 }}>{cartCount}</span>
             <span style={{ fontWeight: 600, fontSize: 14 }}>View Cart</span>
@@ -391,7 +403,7 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
 
       {/* Active Orders Banner */}
       {activeOrders.length > 0 && (
-        <div onClick={() => setScreen("tracking")} style={{ position: "fixed", bottom: cartCount > 0 ? 80 : 16, left: 16, right: 16, maxWidth: 600, margin: "0 auto", padding: "12px 20px", background: COLORS.successDim, border: `1px solid ${COLORS.success}44`, borderRadius: 14, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", zIndex: 19 }}>
+        <div onClick={() => setScreen("tracking")} style={{ position: "fixed", bottom: cartCount > 0 ? `calc(80px + env(safe-area-inset-bottom, 0px))` : `calc(16px + env(safe-area-inset-bottom, 0px))`, left: 16, right: 16, maxWidth: 600, margin: "0 auto", padding: "12px 20px", background: COLORS.successDim, border: `1px solid ${COLORS.success}44`, borderRadius: 14, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", zIndex: 19 }}>
           <span style={{ fontSize: 14, color: COLORS.success, fontWeight: 600 }}>📍 {activeOrders.length} Active Order{activeOrders.length > 1 ? "s" : ""}</span>
           <span style={{ fontSize: 12, color: COLORS.success }}>Track →</span>
         </div>
@@ -594,6 +606,7 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
 // KITCHEN DASHBOARD
 // ============================================================
 function KitchenDashboard({ orders, setOrders, menu, setMenu, onSwitchView }) {
+  const isMobile = useIsMobile();
   const [tab, setTab] = useState("orders"); // orders | menu | analytics
   const [isOpen, setIsOpen] = useState(true);
   const audioRef = useRef(null);
@@ -649,12 +662,12 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onSwitchView }) {
           </div>
         )}
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 10, borderTop: `1px solid ${COLORS.border}` }}>
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 10, borderTop: `1px solid ${COLORS.border}`, gap: 8 }}>
           <div>
             <span style={{ fontWeight: 800, color: COLORS.accent, fontSize: 16 }}>${order.total.toFixed(2)}</span>
             <span style={{ fontSize: 11, color: COLORS.textMuted, marginLeft: 8 }}>{order.paymentMethod === "cash" ? "💵 Cash" : "💳 Paid"}</span>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {order.status === "pending" && (
               <Button variant="danger" size="sm" onClick={() => updateOrderStatus(order.id, "cancelled")}>Reject</Button>
             )}
@@ -679,53 +692,53 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onSwitchView }) {
   return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text }}>
       {/* Dashboard Header */}
-      <div style={{ padding: "14px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${COLORS.border}`, background: COLORS.surface }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, fontFamily: "'Playfair Display', serif" }}>🥟 Kitchen Dashboard</h1>
-          <div onClick={() => setIsOpen(!isOpen)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 20, background: isOpen ? COLORS.successDim : COLORS.dangerDim, border: `1px solid ${isOpen ? COLORS.success : COLORS.danger}44`, cursor: "pointer" }}>
+      <div style={{ padding: isMobile ? "12px 16px" : "14px 24px", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8, borderBottom: `1px solid ${COLORS.border}`, background: COLORS.surface }}>
+        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 14, flexWrap: "wrap" }}>
+          <h1 style={{ margin: 0, fontSize: isMobile ? 16 : 20, fontWeight: 800, fontFamily: "'Playfair Display', serif" }}>🥟 Kitchen</h1>
+          <div onClick={() => setIsOpen(!isOpen)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 20, background: isOpen ? COLORS.successDim : COLORS.dangerDim, border: `1px solid ${isOpen ? COLORS.success : COLORS.danger}44`, cursor: "pointer" }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: isOpen ? COLORS.success : COLORS.danger }} />
-            <span style={{ fontSize: 12, fontWeight: 600, color: isOpen ? COLORS.success : COLORS.danger }}>{isOpen ? "Accepting Orders" : "Kitchen Closed"}</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: isOpen ? COLORS.success : COLORS.danger }}>{isOpen ? "Open" : "Closed"}</span>
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={onSwitchView}>← Customer View</Button>
+        <Button variant="ghost" size="sm" onClick={onSwitchView}>← Customer</Button>
       </div>
 
       {/* Stats Bar */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, padding: "16px 24px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? 8 : 12, padding: isMobile ? "12px 16px" : "16px 24px" }}>
         {[
           { label: "Pending", value: pendingOrders.length, color: COLORS.warning, icon: "⏳" },
           { label: "Active", value: activeOrders.length, color: COLORS.accent, icon: "🔥" },
           { label: "Delivering", value: deliveringOrders.length, color: COLORS.success, icon: "🛵" },
-          { label: "Today's Sales", value: `$${totalSales.toFixed(0)}`, color: COLORS.success, icon: "💰" },
+          { label: "Sales", value: `$${totalSales.toFixed(0)}`, color: COLORS.success, icon: "💰" },
         ].map((stat, i) => (
-          <div key={i} style={{ background: COLORS.card, borderRadius: 12, padding: 16, border: `1px solid ${COLORS.border}` }}>
+          <div key={i} style={{ background: COLORS.card, borderRadius: 12, padding: isMobile ? 12 : 16, border: `1px solid ${COLORS.border}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 12, color: COLORS.textMuted }}>{stat.label}</span>
+              <span style={{ fontSize: 11, color: COLORS.textMuted }}>{stat.label}</span>
               <span>{stat.icon}</span>
             </div>
-            <p style={{ margin: "6px 0 0", fontSize: 24, fontWeight: 800, color: stat.color }}>{stat.value}</p>
+            <p style={{ margin: "4px 0 0", fontSize: isMobile ? 20 : 24, fontWeight: 800, color: stat.color }}>{stat.value}</p>
           </div>
         ))}
       </div>
 
       {/* Tabs */}
-      <div style={{ padding: "0 24px", display: "flex", gap: 0, borderBottom: `1px solid ${COLORS.border}` }}>
+      <div className="hide-scrollbar" style={{ padding: isMobile ? "0 16px" : "0 24px", display: "flex", gap: 0, borderBottom: `1px solid ${COLORS.border}`, overflowX: "auto" }}>
         {[
           { id: "orders", label: "Orders", count: pendingOrders.length + activeOrders.length },
-          { id: "menu", label: "Menu Management" },
+          { id: "menu", label: "Menu" },
           { id: "analytics", label: "Analytics" },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            style={{ padding: "12px 20px", background: "none", border: "none", borderBottom: `2px solid ${tab === t.id ? COLORS.accent : "transparent"}`, color: tab === t.id ? COLORS.accent : COLORS.textMuted, fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+            style={{ padding: isMobile ? "10px 14px" : "12px 20px", background: "none", border: "none", borderBottom: `2px solid ${tab === t.id ? COLORS.accent : "transparent"}`, color: tab === t.id ? COLORS.accent : COLORS.textMuted, fontWeight: 600, fontSize: isMobile ? 13 : 14, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
             {t.label} {t.count > 0 && <span style={{ background: COLORS.accent, color: COLORS.white, borderRadius: 10, padding: "1px 8px", fontSize: 11 }}>{t.count}</span>}
           </button>
         ))}
       </div>
 
       {/* Tab Content */}
-      <div style={{ padding: 24 }}>
+      <div style={{ padding: isMobile ? 16 : 24 }}>
         {tab === "orders" && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 24 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(360px, 1fr))", gap: isMobile ? 16 : 24 }}>
             {/* Pending Column */}
             <div>
               <h3 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 700, color: COLORS.warning, display: "flex", alignItems: "center", gap: 8 }}>
@@ -770,7 +783,7 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onSwitchView }) {
 
         {tab === "analytics" && (
           <div style={{ maxWidth: 700 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 24 }}>
               <div style={{ background: COLORS.card, borderRadius: 14, padding: 20, border: `1px solid ${COLORS.border}` }}>
                 <p style={{ margin: 0, fontSize: 12, color: COLORS.textMuted }}>Total Revenue Today</p>
                 <p style={{ margin: "8px 0 0", fontSize: 28, fontWeight: 800, color: COLORS.success }}>${totalSales.toFixed(2)}</p>
