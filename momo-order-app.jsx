@@ -818,15 +818,21 @@ function CustomerApp({ user, orders, setOrders, menu }) {
   const [activeCategory, setActiveCategory] = useState("all");
   const [screen, setScreen] = useState("menu"); // menu | cart | tracking | profile
   const [specialInstructions, setSpecialInstructions] = useState("");
-  const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [deliveryLat, setDeliveryLat] = useState(43.6532);
-  const [deliveryLng, setDeliveryLng] = useState(-79.3832);
+  const [deliveryAddress, setDeliveryAddress] = useState(user.address || "");
+  const [deliveryLat, setDeliveryLat] = useState(user.addressLat || 43.6532);
+  const [deliveryLng, setDeliveryLng] = useState(user.addressLng || -79.3832);
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [mapOpen, setMapOpen] = useState(false);
+  const [profileMapOpen, setProfileMapOpen] = useState(false);
   const [stripeClientSecret, setStripeClientSecret] = useState("");
   const [stripeSheetOpen, setStripeSheetOpen] = useState(false);
   const [orderLoading, setOrderLoading] = useState(false);
   const [orderError, setOrderError] = useState("");
+
+  const saveUserAddress = (addr, lat, lng) => {
+    const updated = { ...user, address: addr, addressLat: lat, addressLng: lng };
+    localStorage.setItem("momoghar_user", JSON.stringify(updated));
+  };
 
   const filteredItems = menu.filter(i => activeCategory === "all" || i.category === activeCategory);
   const cartTotal = cart.reduce((sum, c) => sum + c.price * c.qty, 0);
@@ -1072,7 +1078,7 @@ function CustomerApp({ user, orders, setOrders, menu }) {
           onClose={() => setMapOpen(false)}
           initialLat={deliveryLat}
           initialLng={deliveryLng}
-          onConfirm={(addr, lat, lng) => { setDeliveryAddress(addr); setDeliveryLat(lat); setDeliveryLng(lng); }}
+          onConfirm={(addr, lat, lng) => { setDeliveryAddress(addr); setDeliveryLat(lat); setDeliveryLng(lng); saveUserAddress(addr, lat, lng); }}
         />
 
         <StripePaymentSheet
@@ -1197,10 +1203,32 @@ function CustomerApp({ user, orders, setOrders, menu }) {
           <p style={{ margin: "8px 0 0", fontSize: 12, opacity: 0.7 }}>{Math.max(0, 1000 - user.points)} more for a Free Platter!</p>
         </div>
 
+        {/* Saved Address */}
+        <div style={{ marginBottom: 20 }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary, margin: "0 0 10px", display: "flex", alignItems: "center", gap: 6 }}><MapPin size={13} /> Delivery Address</p>
+          <div
+            onClick={() => setProfileMapOpen(true)}
+            style={{ padding: 14, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}
+          >
+            <MapPin size={18} color={deliveryAddress ? COLORS.accent : COLORS.textMuted} style={{ flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: 14, color: deliveryAddress ? COLORS.text : COLORS.textMuted, lineHeight: 1.4 }}>
+              {deliveryAddress || "Tap to set your delivery address"}
+            </span>
+            <ChevronRight size={16} color={COLORS.textMuted} />
+          </div>
+        </div>
+
+        <FullScreenMap
+          open={profileMapOpen}
+          onClose={() => setProfileMapOpen(false)}
+          initialLat={deliveryLat}
+          initialLng={deliveryLng}
+          onConfirm={(addr, lat, lng) => { setDeliveryAddress(addr); setDeliveryLat(lat); setDeliveryLng(lng); saveUserAddress(addr, lat, lng); }}
+        />
+
         {/* Quick Actions */}
         {[
           { Icon: ClipboardList, label: "Order History", action: () => setScreen("tracking") },
-          { Icon: MapPin, label: "Saved Addresses", action: () => {} },
           { Icon: Ticket, label: "My Coupons", action: () => {} },
           { Icon: Users, label: "Refer a Friend (+100 pts)", action: () => {} },
         ].map((item, i) => (
