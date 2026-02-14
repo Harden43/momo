@@ -1412,6 +1412,158 @@ function DashboardLogin({ onLogin }) {
 }
 
 // ============================================================
+// DRIVER NAVIGATION MAP (Uber-style)
+// ============================================================
+function DriverNavMap({ order, onDelivered, onClose }) {
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const driverMarkerRef = useRef(null);
+  const routeLineRef = useRef(null);
+  const watchIdRef = useRef(null);
+  const [eta, setEta] = useState(null);
+  const [distance, setDistance] = useState(null);
+  const [driverPos, setDriverPos] = useState(null);
+  const etaTimeout = useRef(null);
+
+  // Start GPS and init map
+  useEffect(() => {
+    if (!mapRef.current || !order.lat || !order.lng) return;
+
+    const map = L.map(mapRef.current, {
+      zoomControl: false,
+      attributionControl: false,
+    });
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { maxZoom: 19 }).addTo(map);
+
+    // Customer marker
+    const customerIcon = L.divIcon({
+      className: "",
+      html: `<div style="width:40px;height:40px;background:${COLORS.success};border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid ${COLORS.white};box-shadow:0 2px 12px rgba(0,0,0,0.5)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></div>`,
+      iconSize: [40, 40],
+      iconAnchor: [20, 40],
+    });
+    L.marker([order.lat, order.lng], { icon: customerIcon }).addTo(map);
+
+    map.setView([order.lat, order.lng], 14);
+    mapInstanceRef.current = map;
+
+    // Start GPS tracking
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        setDriverPos({ lat, lng });
+        supabase.from("orders").update({ driver_lat: lat, driver_lng: lng }).eq("id", order.id).then();
+
+        // Driver marker
+        const driverIcon = L.divIcon({
+          className: "",
+          html: `<div style="width:44px;height:44px;background:#3B82F6;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid ${COLORS.white};box-shadow:0 2px 12px rgba(59,130,246,0.6);animation:pulse 2s infinite"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 19 21 12 17 5 21"/></svg></div>`,
+          iconSize: [44, 44],
+          iconAnchor: [22, 22],
+        });
+
+        if (driverMarkerRef.current) {
+          driverMarkerRef.current.setLatLng([lat, lng]);
+        } else {
+          driverMarkerRef.current = L.marker([lat, lng], { icon: driverIcon, zIndexOffset: 1000 }).addTo(map);
+        }
+
+        // Fit bounds
+        const bounds = L.latLngBounds([lat, lng], [order.lat, order.lng]);
+        map.fitBounds(bounds, { padding: [80, 80], animate: true });
+
+        // Fetch route + ETA (throttled)
+        clearTimeout(etaTimeout.current);
+        etaTimeout.current = setTimeout(() => {
+          fetch(`https://router.project-osrm.org/route/v1/driving/${lng},${lat};${order.lng},${order.lat}?overview=full&geometries=geojson`)
+            .then(r => r.json())
+            .then(data => {
+              if (data.routes?.[0]) {
+                const route = data.routes[0];
+                const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+                if (routeLineRef.current) routeLineRef.current.remove();
+                routeLineRef.current = L.polyline(coords, { color: "#3B82F6", weight: 5, opacity: 0.9 }).addTo(map);
+                setEta(Math.round(route.duration / 60));
+                setDistance((route.distance / 1000).toFixed(1));
+              }
+            })
+            .catch(() => {});
+        }, 2000);
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }
+    );
+
+    return () => {
+      if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
+      clearTimeout(etaTimeout.current);
+      if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; }
+      driverMarkerRef.current = null;
+      routeLineRef.current = null;
+    };
+  }, [order.id]);
+
+  const handleDelivered = () => {
+    if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
+    supabase.from("orders").update({ driver_lat: null, driver_lng: null }).eq("id", order.id).then();
+    onDelivered();
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 200, background: COLORS.bg, display: "flex", flexDirection: "column" }}>
+      {/* Top bar */}
+      <div style={{
+        padding: "12px 16px", display: "flex", alignItems: "center", gap: 12,
+        background: COLORS.surface, borderBottom: `1px solid ${COLORS.border}`,
+        paddingTop: "calc(12px + env(safe-area-inset-top, 0px))",
+      }}>
+        <button onClick={onClose} style={{ background: "none", border: "none", color: COLORS.text, cursor: "pointer", padding: 4, display: "flex" }}>
+          <ArrowLeft size={22} />
+        </button>
+        <div style={{ flex: 1 }}>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+            <Navigation size={16} color="#3B82F6" /> Delivering {order.orderNumber}
+          </h2>
+          <p style={{ margin: 0, fontSize: 12, color: COLORS.textMuted }}>{order.userName}</p>
+        </div>
+        {driverPos && <div style={{ background: "#3B82F622", borderRadius: 8, padding: "4px 10px", fontSize: 11, color: "#3B82F6", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#3B82F6", animation: "pulse 2s infinite" }} /> LIVE
+        </div>}
+      </div>
+
+      {/* Map */}
+      <div ref={mapRef} style={{ flex: 1 }} />
+
+      {/* Bottom card */}
+      <div style={{
+        padding: "16px 20px", background: COLORS.surface, borderTop: `1px solid ${COLORS.border}`,
+        paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))",
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div>
+            <p style={{ margin: 0, fontSize: 11, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5 }}>ETA</p>
+            <p style={{ margin: 0, fontSize: 28, fontWeight: 700, color: COLORS.text }}>{eta ?? "—"} <span style={{ fontSize: 14, fontWeight: 500, color: COLORS.textSecondary }}>min</span></p>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <p style={{ margin: 0, fontSize: 11, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5 }}>Distance</p>
+            <p style={{ margin: 0, fontSize: 28, fontWeight: 700, color: COLORS.text }}>{distance ?? "—"} <span style={{ fontSize: 14, fontWeight: 500, color: COLORS.textSecondary }}>km</span></p>
+          </div>
+        </div>
+
+        <div style={{ fontSize: 13, color: COLORS.textSecondary, display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 16, padding: "10px 12px", background: COLORS.card, borderRadius: 10, border: `1px solid ${COLORS.border}` }}>
+          <MapPin size={14} color={COLORS.success} style={{ flexShrink: 0, marginTop: 2 }} />
+          <span style={{ lineHeight: 1.4 }}>{order.deliveryAddress}</span>
+        </div>
+
+        <Button fullWidth size="lg" style={{ background: COLORS.success, color: COLORS.white }} onClick={handleDelivered}>
+          <CircleCheck size={18} /> Mark as Delivered
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // KITCHEN DASHBOARD
 // ============================================================
 function KitchenDashboard({ orders, setOrders, menu, setMenu, onLogout }) {
@@ -1419,33 +1571,7 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onLogout }) {
   const [tab, setTab] = useState("orders"); // orders | menu | analytics
   const [isOpen, setIsOpen] = useState(true);
   const audioRef = useRef(null);
-  const [trackingOrderId, setTrackingOrderId] = useState(null);
-  const watchIdRef = useRef(null);
-
-  const startTracking = (orderId) => {
-    if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
-    setTrackingOrderId(orderId);
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        supabase.from("orders").update({ driver_lat: pos.coords.latitude, driver_lng: pos.coords.longitude }).eq("id", orderId).then();
-      },
-      () => {},
-      { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }
-    );
-  };
-
-  const stopTracking = (orderId) => {
-    if (watchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-      watchIdRef.current = null;
-    }
-    setTrackingOrderId(null);
-    supabase.from("orders").update({ driver_lat: null, driver_lng: null }).eq("id", orderId).then();
-  };
-
-  useEffect(() => {
-    return () => { if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current); };
-  }, []);
+  const [navOrderId, setNavOrderId] = useState(null);
 
   const pendingOrders = orders.filter(o => o.status === "pending");
   const activeOrders = orders.filter(o => ["accepted", "cooking", "ready"].includes(o.status));
@@ -1507,19 +1633,20 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onLogout }) {
             {order.status === "pending" && (
               <Button variant="danger" size="sm" onClick={() => updateOrderStatus(order.id, "cancelled")}>Reject</Button>
             )}
-            {nextStatus && nextStatus !== "delivered" && (
+            {nextStatus && nextStatus !== "delivered" && nextStatus !== "delivering" && (
               <Button size="sm" onClick={() => updateOrderStatus(order.id, nextStatus)}>
-                <nextConfig.Icon size={14} /> {nextStatus === "accepted" ? "Accept" : nextStatus === "cooking" ? "Start Cooking" : nextStatus === "ready" ? "Mark Ready" : nextStatus === "delivering" ? "Out for Delivery" : nextStatus}
+                <nextConfig.Icon size={14} /> {nextStatus === "accepted" ? "Accept" : nextStatus === "cooking" ? "Start Cooking" : nextStatus === "ready" ? "Mark Ready" : nextStatus}
+              </Button>
+            )}
+            {nextStatus === "delivering" && (
+              <Button size="sm" onClick={() => { updateOrderStatus(order.id, "delivering"); setNavOrderId(order.id); }}>
+                <Truck size={14} /> Out for Delivery
               </Button>
             )}
             {order.status === "delivering" && (
               <>
-                {trackingOrderId === order.id ? (
-                  <Button variant="secondary" size="sm" onClick={() => stopTracking(order.id)}><Navigation size={14} /> Stop Tracking</Button>
-                ) : (
-                  <Button size="sm" style={{ background: COLORS.success, color: COLORS.white }} onClick={() => startTracking(order.id)}><Navigation size={14} /> Go Live</Button>
-                )}
-                <Button variant="success" size="sm" onClick={() => { stopTracking(order.id); updateOrderStatus(order.id, "delivered"); }}><CircleCheck size={14} /> Delivered</Button>
+                <Button size="sm" style={{ background: "#3B82F6", color: COLORS.white }} onClick={() => setNavOrderId(order.id)}><Navigation size={14} /> Navigate</Button>
+                <Button variant="success" size="sm" onClick={() => updateOrderStatus(order.id, "delivered")}><CircleCheck size={14} /> Delivered</Button>
               </>
             )}
           </div>
@@ -1532,8 +1659,17 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onLogout }) {
     );
   };
 
+  const navOrder = orders.find(o => o.id === navOrderId);
+
   return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text }}>
+      {navOrder && (
+        <DriverNavMap
+          order={navOrder}
+          onDelivered={() => { updateOrderStatus(navOrder.id, "delivered"); setNavOrderId(null); }}
+          onClose={() => setNavOrderId(null)}
+        />
+      )}
       {/* Dashboard Header */}
       <div style={{ padding: isMobile ? "12px 16px" : "14px 24px", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8, borderBottom: `1px solid ${COLORS.border}`, background: COLORS.surface }}>
         <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 14, flexWrap: "wrap" }}>
