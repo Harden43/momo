@@ -291,43 +291,50 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-function DeliveryMap({ address, onAddressChange, onLatLngChange }) {
+function FullScreenMap({ open, onClose, initialLat, initialLng, onConfirm }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markerRef = useRef(null);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
-  const [searching, setSearching] = useState(false);
   const searchTimeout = useRef(null);
+  const [selectedAddress, setSelectedAddress] = useState("");
+  const selectedLatLng = useRef({ lat: initialLat, lng: initialLng });
 
-  // Initialize map
+  // Initialize map when overlay opens
   useEffect(() => {
-    if (mapInstanceRef.current) return;
-    const map = L.map(mapRef.current, {
-      center: [43.6532, -79.3832], // Toronto default
-      zoom: 13,
-      zoomControl: false,
-      attributionControl: false,
-    });
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      maxZoom: 19,
-    }).addTo(map);
-    L.control.zoom({ position: "bottomright" }).addTo(map);
+    if (!open) return;
+    // Small delay so the DOM element is rendered
+    const timer = setTimeout(() => {
+      if (!mapRef.current || mapInstanceRef.current) return;
+      const map = L.map(mapRef.current, {
+        center: [initialLat, initialLng],
+        zoom: 13,
+        zoomControl: false,
+        attributionControl: false,
+      });
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        maxZoom: 19,
+      }).addTo(map);
+      L.control.zoom({ position: "bottomright" }).addTo(map);
 
-    // Click to drop pin
-    map.on("click", (e) => {
-      placeMarker(map, e.latlng.lat, e.latlng.lng);
-      reverseGeocode(e.latlng.lat, e.latlng.lng);
-    });
+      map.on("click", (e) => {
+        placeMarker(map, e.latlng.lat, e.latlng.lng);
+        reverseGeocode(e.latlng.lat, e.latlng.lng);
+      });
 
-    mapInstanceRef.current = map;
+      mapInstanceRef.current = map;
+    }, 50);
 
     return () => {
-      map.remove();
-      mapInstanceRef.current = null;
-      markerRef.current = null;
+      clearTimeout(timer);
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        markerRef.current = null;
+      }
     };
-  }, []);
+  }, [open]);
 
   const placeMarker = (map, lat, lng) => {
     if (markerRef.current) {
@@ -339,7 +346,7 @@ function DeliveryMap({ address, onAddressChange, onLatLngChange }) {
         reverseGeocode(pos.lat, pos.lng);
       });
     }
-    onLatLngChange(lat, lng);
+    selectedLatLng.current = { lat, lng };
   };
 
   const reverseGeocode = async (lat, lng) => {
@@ -347,8 +354,8 @@ function DeliveryMap({ address, onAddressChange, onLatLngChange }) {
       const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
       const data = await res.json();
       if (data.display_name) {
-        onAddressChange(data.display_name);
-        setQuery(data.display_name);
+        setSelectedAddress(data.display_name);
+        selectedLatLng.current = { lat, lng };
       }
     } catch (err) {
       console.error("Reverse geocode error:", err);
@@ -357,7 +364,6 @@ function DeliveryMap({ address, onAddressChange, onLatLngChange }) {
 
   const searchAddress = async (q) => {
     if (q.length < 3) { setResults([]); return; }
-    setSearching(true);
     try {
       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5&addressdetails=1`);
       const data = await res.json();
@@ -365,7 +371,6 @@ function DeliveryMap({ address, onAddressChange, onLatLngChange }) {
     } catch (err) {
       console.error("Search error:", err);
     }
-    setSearching(false);
   };
 
   const handleInputChange = (val) => {
@@ -380,19 +385,40 @@ function DeliveryMap({ address, onAddressChange, onLatLngChange }) {
     const map = mapInstanceRef.current;
     map.setView([lat, lng], 16);
     placeMarker(map, lat, lng);
-    onAddressChange(item.display_name);
-    setQuery(item.display_name);
+    setSelectedAddress(item.display_name);
+    setQuery("");
     setResults([]);
   };
 
-  return (
-    <div style={{ marginTop: 16 }}>
-      <label style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary, display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-        <MapPin size={13} /> Delivery Address
-      </label>
+  const handleConfirm = () => {
+    onConfirm(selectedAddress, selectedLatLng.current.lat, selectedLatLng.current.lng);
+    onClose();
+  };
 
-      {/* Search input */}
-      <div style={{ position: "relative", marginBottom: 8 }}>
+  if (!open) return null;
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 100, background: COLORS.bg,
+      display: "flex", flexDirection: "column",
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: "12px 16px", display: "flex", alignItems: "center", gap: 12,
+        borderBottom: `1px solid ${COLORS.border}`, background: COLORS.surface,
+        paddingTop: "calc(12px + env(safe-area-inset-top, 0px))",
+      }}>
+        <button onClick={onClose} style={{
+          background: "none", border: "none", color: COLORS.text, cursor: "pointer",
+          padding: 4, display: "flex",
+        }}>
+          <XCircle size={22} />
+        </button>
+        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, flex: 1 }}>Set Delivery Location</h2>
+      </div>
+
+      {/* Search bar */}
+      <div style={{ padding: "12px 16px", position: "relative", background: COLORS.surface }}>
         <div style={{ position: "relative" }}>
           <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", opacity: 0.5 }}>
             <MapPin size={16} color={COLORS.textMuted} />
@@ -402,8 +428,9 @@ function DeliveryMap({ address, onAddressChange, onLatLngChange }) {
             value={query}
             onChange={(e) => handleInputChange(e.target.value)}
             placeholder="Search for your address..."
+            autoFocus
             style={{
-              width: "100%", padding: "12px 16px 12px 42px", background: COLORS.surface,
+              width: "100%", padding: "12px 16px 12px 42px", background: COLORS.bg,
               border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.text,
               fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box",
             }}
@@ -413,42 +440,54 @@ function DeliveryMap({ address, onAddressChange, onLatLngChange }) {
         {/* Search results dropdown */}
         {results.length > 0 && (
           <div style={{
-            position: "absolute", top: "100%", left: 0, right: 0, zIndex: 30,
+            position: "absolute", top: "100%", left: 16, right: 16, zIndex: 110,
             background: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 10,
-            marginTop: 4, overflow: "hidden", boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+            marginTop: 4, overflow: "hidden", boxShadow: "0 8px 24px rgba(0,0,0,0.6)",
           }}>
             {results.map((item, i) => (
               <div
                 key={i}
                 onClick={() => selectResult(item)}
                 style={{
-                  padding: "10px 14px", cursor: "pointer", fontSize: 13,
+                  padding: "12px 14px", cursor: "pointer", fontSize: 13,
                   color: COLORS.text, borderBottom: i < results.length - 1 ? `1px solid ${COLORS.border}` : "none",
-                  display: "flex", alignItems: "center", gap: 8,
-                  transition: "background 0.15s",
+                  display: "flex", alignItems: "flex-start", gap: 10,
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = COLORS.surfaceHover}
-                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
               >
-                <MapPin size={14} color={COLORS.accent} style={{ flexShrink: 0 }} />
-                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.display_name}</span>
+                <MapPin size={14} color={COLORS.accent} style={{ flexShrink: 0, marginTop: 2 }} />
+                <span style={{ lineHeight: 1.4 }}>{item.display_name}</span>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Map container */}
-      <div
-        ref={mapRef}
-        style={{
-          height: 220, borderRadius: 12, border: `1px solid ${COLORS.border}`,
-          overflow: "hidden", position: "relative", zIndex: 1,
-        }}
-      />
-      <p style={{ margin: "6px 0 0", fontSize: 11, color: COLORS.textMuted }}>
-        Tap the map or search above to set your delivery location
-      </p>
+      {/* Map fills remaining space */}
+      <div ref={mapRef} style={{ flex: 1, position: "relative", zIndex: 1 }} />
+
+      {/* Bottom bar with selected address + confirm */}
+      <div style={{
+        padding: "14px 16px", background: COLORS.surface,
+        borderTop: `1px solid ${COLORS.border}`,
+        paddingBottom: "calc(14px + env(safe-area-inset-bottom, 0px))",
+      }}>
+        {selectedAddress && (
+          <p style={{
+            margin: "0 0 10px", fontSize: 13, color: COLORS.textSecondary,
+            display: "flex", alignItems: "flex-start", gap: 6, lineHeight: 1.4,
+          }}>
+            <MapPin size={14} color={COLORS.accent} style={{ flexShrink: 0, marginTop: 2 }} />
+            {selectedAddress}
+          </p>
+        )}
+        <Button
+          onClick={handleConfirm}
+          fullWidth
+          disabled={!selectedAddress}
+        >
+          <CheckCircle size={16} /> Confirm Location
+        </Button>
+      </div>
     </div>
   );
 }
@@ -513,6 +552,7 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
   const [deliveryLat, setDeliveryLat] = useState(43.6532);
   const [deliveryLng, setDeliveryLng] = useState(-79.3832);
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [mapOpen, setMapOpen] = useState(false);
 
   const filteredItems = menu.filter(i => activeCategory === "all" || i.category === activeCategory);
   const cartTotal = cart.reduce((sum, c) => sum + c.price * c.qty, 0);
@@ -667,10 +707,31 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
         </div>
 
         {/* Delivery Address */}
-        <DeliveryMap
-          address={deliveryAddress}
-          onAddressChange={setDeliveryAddress}
-          onLatLngChange={(lat, lng) => { setDeliveryLat(lat); setDeliveryLng(lng); }}
+        <div style={{ marginTop: 16 }}>
+          <label style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary, display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}><MapPin size={13} /> Delivery Address</label>
+          <div
+            onClick={() => setMapOpen(true)}
+            style={{
+              width: "100%", padding: "12px 16px 12px 42px", background: COLORS.surface,
+              border: `1px solid ${COLORS.border}`, borderRadius: 10, color: deliveryAddress ? COLORS.text : COLORS.textMuted,
+              fontSize: 14, fontFamily: "inherit", cursor: "pointer", position: "relative",
+              minHeight: 44, display: "flex", alignItems: "center",
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}
+          >
+            <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", opacity: 0.5 }}>
+              <MapPin size={16} color={COLORS.textMuted} />
+            </span>
+            {deliveryAddress || "Tap to set delivery location"}
+          </div>
+        </div>
+
+        <FullScreenMap
+          open={mapOpen}
+          onClose={() => setMapOpen(false)}
+          initialLat={deliveryLat}
+          initialLng={deliveryLng}
+          onConfirm={(addr, lat, lng) => { setDeliveryAddress(addr); setDeliveryLat(lat); setDeliveryLng(lng); }}
         />
 
         {/* Payment Method */}
