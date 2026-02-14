@@ -699,41 +699,6 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
           </div>
         ))}
 
-        {/* Special Instructions */}
-        <div style={{ marginTop: 20 }}>
-          <label style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary, display: "block", marginBottom: 8 }}>Special Instructions</label>
-          <textarea value={specialInstructions} onChange={e => setSpecialInstructions(e.target.value)} placeholder="Extra spicy chutney, no onions, etc." rows={2}
-            style={{ width: "100%", padding: 12, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.text, fontSize: 14, fontFamily: "inherit", resize: "none", boxSizing: "border-box", outline: "none" }} />
-        </div>
-
-        {/* Delivery Address */}
-        <div style={{ marginTop: 16 }}>
-          <label style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary, display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}><MapPin size={13} /> Delivery Address</label>
-          <div
-            onClick={() => setMapOpen(true)}
-            style={{
-              width: "100%", padding: "12px 16px 12px 42px", background: COLORS.surface,
-              border: `1px solid ${COLORS.border}`, borderRadius: 10, color: deliveryAddress ? COLORS.text : COLORS.textMuted,
-              fontSize: 14, fontFamily: "inherit", cursor: "pointer", position: "relative",
-              minHeight: 44, display: "flex", alignItems: "center",
-              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-            }}
-          >
-            <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", opacity: 0.5 }}>
-              <MapPin size={16} color={COLORS.textMuted} />
-            </span>
-            {deliveryAddress || "Tap to set delivery location"}
-          </div>
-        </div>
-
-        <FullScreenMap
-          open={mapOpen}
-          onClose={() => setMapOpen(false)}
-          initialLat={deliveryLat}
-          initialLng={deliveryLng}
-          onConfirm={(addr, lat, lng) => { setDeliveryAddress(addr); setDeliveryLat(lat); setDeliveryLng(lng); }}
-        />
-
         {/* Payment Method */}
         <div style={{ marginTop: 20 }}>
           <label style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary, display: "block", marginBottom: 8 }}>Payment Method</label>
@@ -763,6 +728,41 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
             <span style={{ fontWeight: 800, fontSize: 18, color: COLORS.accent }}>${(cartTotal + deliveryFee).toFixed(2)}</span>
           </div>
           <p style={{ margin: "8px 0 0", fontSize: 12, color: COLORS.success, display: "flex", alignItems: "center", gap: 4 }}><Gift size={12} /> You'll earn {Math.floor((cartTotal + deliveryFee) * 10)} points with this order!</p>
+        </div>
+
+        {/* Delivery Address */}
+        <div style={{ marginTop: 20 }}>
+          <label style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary, display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}><MapPin size={13} /> Delivery Address</label>
+          <div
+            onClick={() => setMapOpen(true)}
+            style={{
+              width: "100%", padding: "12px 16px 12px 42px", background: COLORS.surface,
+              border: `1px solid ${COLORS.border}`, borderRadius: 10, color: deliveryAddress ? COLORS.text : COLORS.textMuted,
+              fontSize: 14, fontFamily: "inherit", cursor: "pointer", position: "relative",
+              minHeight: 44, display: "flex", alignItems: "center",
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}
+          >
+            <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", opacity: 0.5 }}>
+              <MapPin size={16} color={COLORS.textMuted} />
+            </span>
+            {deliveryAddress || "Tap to set delivery location"}
+          </div>
+        </div>
+
+        <FullScreenMap
+          open={mapOpen}
+          onClose={() => setMapOpen(false)}
+          initialLat={deliveryLat}
+          initialLng={deliveryLng}
+          onConfirm={(addr, lat, lng) => { setDeliveryAddress(addr); setDeliveryLat(lat); setDeliveryLng(lng); }}
+        />
+
+        {/* Special Instructions */}
+        <div style={{ marginTop: 16 }}>
+          <label style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary, display: "block", marginBottom: 8 }}>Special Instructions</label>
+          <textarea value={specialInstructions} onChange={e => setSpecialInstructions(e.target.value)} placeholder="Extra spicy chutney, no onions, etc." rows={2}
+            style={{ width: "100%", padding: 12, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, color: COLORS.text, fontSize: 14, fontFamily: "inherit", resize: "none", boxSizing: "border-box", outline: "none" }} />
         </div>
 
         <Button onClick={placeOrder} fullWidth size="lg" style={{ marginTop: 16, marginBottom: NAV_HEIGHT + 16 }}><ShoppingCart size={16} /> Place Order</Button>
