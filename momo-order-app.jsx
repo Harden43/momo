@@ -8,7 +8,7 @@ import {
   Phone, User, Users, Star, Home, MapPin, Map, CreditCard, Banknote,
   Settings, ArrowLeft, ChevronRight, ClipboardList, Ticket, Gift,
   MessageSquare, Inbox, DollarSign, Plus, Minus, ShoppingCart,
-  LayoutGrid, Leaf, BarChart3, TrendingUp, CircleDot, Camera, Navigation,
+  LayoutGrid, Leaf, BarChart3, TrendingUp, CircleDot, Camera, Navigation, Bell, Volume2, VolumeX,
 } from "lucide-react";
 
 // ============================================================
@@ -1584,10 +1584,81 @@ function DriverNavMap({ order, onDelivered, onClose }) {
 // ============================================================
 function KitchenDashboard({ orders, setOrders, menu, setMenu, onLogout }) {
   const isMobile = useIsMobile();
-  const [tab, setTab] = useState("orders"); // orders | menu | analytics
+  const [tab, setTab] = useState("orders");
   const [isOpen, setIsOpen] = useState(true);
-  const audioRef = useRef(null);
   const [navOrderId, setNavOrderId] = useState(null);
+  const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem("momoghar_sound") !== "false");
+  const [dashProfileMapOpen, setDashProfileMapOpen] = useState(false);
+  const prevOrderCountRef = useRef(orders.length);
+  const prevStatusesRef = useRef({});
+
+  // Owner profile from localStorage
+  const [ownerProfile, setOwnerProfile] = useState(() => {
+    const saved = localStorage.getItem("momoghar_owner");
+    return saved ? JSON.parse(saved) : { avatar: null, kitchenAddress: "", kitchenLat: 43.6532, kitchenLng: -79.3832 };
+  });
+
+  const saveOwnerProfile = (updates) => {
+    const updated = { ...ownerProfile, ...updates };
+    setOwnerProfile(updated);
+    localStorage.setItem("momoghar_owner", JSON.stringify(updated));
+  };
+
+  // Sound effect using Web Audio API
+  const playSound = useCallback((type) => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      gain.gain.value = 0.3;
+      if (type === "new") {
+        osc.frequency.value = 880;
+        osc.type = "sine";
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.5);
+        // Second beep
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.connect(gain2); gain2.connect(ctx.destination);
+        osc2.frequency.value = 1100;
+        osc2.type = "sine";
+        gain2.gain.setValueAtTime(0.3, ctx.currentTime + 0.15);
+        gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.65);
+        osc2.start(ctx.currentTime + 0.15);
+        osc2.stop(ctx.currentTime + 0.65);
+      } else {
+        osc.frequency.value = 660;
+        osc.type = "triangle";
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.3);
+      }
+    } catch (e) {}
+  }, [soundEnabled]);
+
+  // Detect new orders and status changes for sound
+  useEffect(() => {
+    const pendingCount = orders.filter(o => o.status === "pending").length;
+    const prevPending = Object.values(prevStatusesRef.current).filter(s => s === "pending").length;
+    if (pendingCount > prevPending && Object.keys(prevStatusesRef.current).length > 0) {
+      playSound("new");
+    }
+    // Detect status changes
+    orders.forEach(o => {
+      if (prevStatusesRef.current[o.id] && prevStatusesRef.current[o.id] !== o.status) {
+        playSound("status");
+      }
+    });
+    const map = {};
+    orders.forEach(o => { map[o.id] = o.status; });
+    prevStatusesRef.current = map;
+  }, [orders, playSound]);
 
   const pendingOrders = orders.filter(o => o.status === "pending");
   const activeOrders = orders.filter(o => ["accepted", "cooking", "ready"].includes(o.status));
@@ -1677,8 +1748,15 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onLogout }) {
 
   const navOrder = orders.find(o => o.id === navOrderId);
 
+  const dashNavTabs = [
+    { id: "orders", label: "Orders", Icon: Inbox, badge: pendingOrders.length },
+    { id: "menu", label: "Menu", Icon: UtensilsCrossed, badge: 0 },
+    { id: "analytics", label: "Analytics", Icon: BarChart3, badge: 0 },
+    { id: "settings", label: "Settings", Icon: Settings, badge: 0 },
+  ];
+
   return (
-    <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text }}>
+    <div style={{ minHeight: "100vh", background: COLORS.bg, color: COLORS.text, paddingBottom: NAV_HEIGHT + 16 }}>
       {navOrder && (
         <DriverNavMap
           order={navOrder}
@@ -1687,78 +1765,66 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onLogout }) {
         />
       )}
       {/* Dashboard Header */}
-      <div style={{ padding: isMobile ? "12px 16px" : "14px 24px", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8, borderBottom: `1px solid ${COLORS.border}`, background: COLORS.surface }}>
-        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 14, flexWrap: "wrap" }}>
+      <div style={{ padding: isMobile ? "12px 16px" : "14px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, borderBottom: `1px solid ${COLORS.border}`, background: COLORS.surface }}>
+        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 14 }}>
           <h1 style={{ margin: 0, fontSize: isMobile ? 16 : 20, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}><UtensilsCrossed size={isMobile ? 16 : 20} color={COLORS.accent} strokeWidth={2} /> Kitchen</h1>
           <div onClick={() => setIsOpen(!isOpen)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 20, background: isOpen ? COLORS.successDim : COLORS.dangerDim, border: `1px solid ${isOpen ? COLORS.success : COLORS.danger}44`, cursor: "pointer" }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: isOpen ? COLORS.success : COLORS.danger }} />
             <span style={{ fontSize: 11, fontWeight: 600, color: isOpen ? COLORS.success : COLORS.danger }}>{isOpen ? "Open" : "Closed"}</span>
           </div>
         </div>
-        <Button variant="danger" size="sm" onClick={onLogout}><ArrowLeft size={14} /> Logout</Button>
-      </div>
-
-      {/* Stats Bar */}
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? 8 : 12, padding: isMobile ? "12px 16px" : "16px 24px" }}>
-        {[
-          { label: "Pending", value: pendingOrders.length, color: COLORS.warning, Icon: Clock },
-          { label: "Active", value: activeOrders.length, color: COLORS.accent, Icon: Flame },
-          { label: "Delivering", value: deliveringOrders.length, color: COLORS.success, Icon: Truck },
-          { label: "Sales", value: `$${totalSales.toFixed(0)}`, color: COLORS.success, Icon: DollarSign },
-        ].map((stat, i) => (
-          <div key={i} style={{ background: COLORS.card, borderRadius: 12, padding: isMobile ? 12 : 16, border: `1px solid ${COLORS.border}` }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 11, color: COLORS.textMuted }}>{stat.label}</span>
-              <stat.Icon size={16} color={stat.color} />
-            </div>
-            <p style={{ margin: "4px 0 0", fontSize: isMobile ? 20 : 24, fontWeight: 800, color: stat.color }}>{stat.value}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Tabs */}
-      <div className="hide-scrollbar" style={{ padding: isMobile ? "0 16px" : "0 24px", display: "flex", gap: 0, borderBottom: `1px solid ${COLORS.border}`, overflowX: "auto" }}>
-        {[
-          { id: "orders", label: "Orders", count: pendingOrders.length + activeOrders.length },
-          { id: "menu", label: "Menu" },
-          { id: "analytics", label: "Analytics" },
-        ].map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            style={{ padding: isMobile ? "10px 14px" : "12px 20px", background: "none", border: "none", borderBottom: `2px solid ${tab === t.id ? COLORS.accent : "transparent"}`, color: tab === t.id ? COLORS.accent : COLORS.textMuted, fontWeight: 600, fontSize: isMobile ? 13 : 14, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
-            {t.label} {t.count > 0 && <span style={{ background: COLORS.accent, color: COLORS.bg, borderRadius: 10, padding: "1px 8px", fontSize: 11 }}>{t.count}</span>}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button onClick={() => { setSoundEnabled(!soundEnabled); localStorage.setItem("momoghar_sound", !soundEnabled); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex" }}>
+            {soundEnabled ? <Volume2 size={18} color={COLORS.textSecondary} /> : <VolumeX size={18} color={COLORS.textMuted} />}
           </button>
-        ))}
+        </div>
       </div>
 
       {/* Tab Content */}
       <div style={{ padding: isMobile ? 16 : 24 }}>
         {tab === "orders" && (
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(360px, 1fr))", gap: isMobile ? 16 : 24 }}>
-            {/* Pending Column */}
-            <div>
-              <h3 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 700, color: COLORS.warning, display: "flex", alignItems: "center", gap: 8 }}>
-                <Clock size={14} /> New Orders <span style={{ background: COLORS.warningDim, borderRadius: 10, padding: "2px 10px", fontSize: 12 }}>{pendingOrders.length}</span>
-              </h3>
-              {pendingOrders.length === 0 && <p style={{ color: COLORS.textMuted, fontSize: 14, textAlign: "center", padding: 40 }}>No pending orders</p>}
-              {pendingOrders.map(o => <OrderCard key={o.id} order={o} />)}
+          <>
+            {/* Stats Bar */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, marginBottom: 16 }}>
+              {[
+                { label: "Pending", value: pendingOrders.length, color: COLORS.warning, Icon: Clock },
+                { label: "Active", value: activeOrders.length, color: COLORS.accent, Icon: Flame },
+                { label: "Delivering", value: deliveringOrders.length, color: COLORS.success, Icon: Truck },
+                { label: "Sales", value: `$${totalSales.toFixed(0)}`, color: COLORS.success, Icon: DollarSign },
+              ].map((stat, i) => (
+                <div key={i} style={{ background: COLORS.card, borderRadius: 12, padding: 12, border: `1px solid ${COLORS.border}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 11, color: COLORS.textMuted }}>{stat.label}</span>
+                    <stat.Icon size={14} color={stat.color} />
+                  </div>
+                  <p style={{ margin: "4px 0 0", fontSize: 20, fontWeight: 800, color: stat.color }}>{stat.value}</p>
+                </div>
+              ))}
             </div>
 
-            {/* Active Column */}
-            <div>
-              <h3 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 700, color: COLORS.accent, display: "flex", alignItems: "center", gap: 8 }}>
-                <Flame size={14} /> In Progress <span style={{ background: COLORS.accentDim, borderRadius: 10, padding: "2px 10px", fontSize: 12 }}>{activeOrders.length + deliveringOrders.length}</span>
-              </h3>
-              {[...activeOrders, ...deliveringOrders].length === 0 && <p style={{ color: COLORS.textMuted, fontSize: 14, textAlign: "center", padding: 40 }}>No active orders</p>}
-              {[...activeOrders, ...deliveringOrders].map(o => <OrderCard key={o.id} order={o} />)}
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(360px, 1fr))", gap: isMobile ? 16 : 24 }}>
+              <div>
+                <h3 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 700, color: COLORS.warning, display: "flex", alignItems: "center", gap: 8 }}>
+                  <Clock size={14} /> New Orders <span style={{ background: COLORS.warningDim, borderRadius: 10, padding: "2px 10px", fontSize: 12 }}>{pendingOrders.length}</span>
+                </h3>
+                {pendingOrders.length === 0 && <p style={{ color: COLORS.textMuted, fontSize: 14, textAlign: "center", padding: 40 }}>No pending orders</p>}
+                {pendingOrders.map(o => <OrderCard key={o.id} order={o} />)}
+              </div>
+              <div>
+                <h3 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 700, color: COLORS.accent, display: "flex", alignItems: "center", gap: 8 }}>
+                  <Flame size={14} /> In Progress <span style={{ background: COLORS.accentDim, borderRadius: 10, padding: "2px 10px", fontSize: 12 }}>{activeOrders.length + deliveringOrders.length}</span>
+                </h3>
+                {[...activeOrders, ...deliveringOrders].length === 0 && <p style={{ color: COLORS.textMuted, fontSize: 14, textAlign: "center", padding: 40 }}>No active orders</p>}
+                {[...activeOrders, ...deliveringOrders].map(o => <OrderCard key={o.id} order={o} />)}
+              </div>
             </div>
-          </div>
+          </>
         )}
 
         {tab === "menu" && (
           <div style={{ maxWidth: 700 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Menu Items</h3>
-              <Button size="sm"><Plus size={14} /> Add Item</Button>
             </div>
             {menu.map(item => (
               <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: `1px solid ${COLORS.border}` }}>
@@ -1780,7 +1846,7 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onLogout }) {
           <div style={{ maxWidth: 700 }}>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 24 }}>
               <div style={{ background: COLORS.card, borderRadius: 14, padding: 20, border: `1px solid ${COLORS.border}` }}>
-                <p style={{ margin: 0, fontSize: 12, color: COLORS.textMuted }}>Total Revenue Today</p>
+                <p style={{ margin: 0, fontSize: 12, color: COLORS.textMuted }}>Total Revenue</p>
                 <p style={{ margin: "8px 0 0", fontSize: 28, fontWeight: 800, color: COLORS.success }}>${totalSales.toFixed(2)}</p>
               </div>
               <div style={{ background: COLORS.card, borderRadius: 14, padding: 20, border: `1px solid ${COLORS.border}` }}>
@@ -1792,12 +1858,10 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onLogout }) {
                 <p style={{ margin: "8px 0 0", fontSize: 28, fontWeight: 800, color: COLORS.text }}>{completedOrders.length}</p>
               </div>
               <div style={{ background: COLORS.card, borderRadius: 14, padding: 20, border: `1px solid ${COLORS.border}` }}>
-                <p style={{ margin: 0, fontSize: 12, color: COLORS.textMuted }}>Most Popular</p>
-                <p style={{ margin: "8px 0 0", fontSize: 18, fontWeight: 800, color: COLORS.text }}>Jhol Momo</p>
+                <p style={{ margin: 0, fontSize: 12, color: COLORS.textMuted }}>Delivering</p>
+                <p style={{ margin: "8px 0 0", fontSize: 28, fontWeight: 800, color: COLORS.success }}>{deliveringOrders.length}</p>
               </div>
             </div>
-
-            {/* Simple sales chart visualization */}
             <div style={{ background: COLORS.card, borderRadius: 14, padding: 20, border: `1px solid ${COLORS.border}` }}>
               <p style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700 }}>Orders by Hour</p>
               <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 120 }}>
@@ -1811,6 +1875,133 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onLogout }) {
             </div>
           </div>
         )}
+
+        {tab === "settings" && (
+          <div style={{ maxWidth: 500, margin: "0 auto" }}>
+            {/* Owner Profile */}
+            <div style={{ textAlign: "center", padding: "24px 0" }}>
+              <div style={{ position: "relative", width: 80, height: 80, margin: "0 auto 12px", cursor: "pointer" }} onClick={() => document.getElementById("owner-avatar-input").click()}>
+                {ownerProfile.avatar ? (
+                  <img src={ownerProfile.avatar} alt="" style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover" }} />
+                ) : (
+                  <div style={{ width: 80, height: 80, borderRadius: "50%", background: COLORS.accentDim, display: "flex", alignItems: "center", justifyContent: "center" }}><User size={36} color={COLORS.accent} /></div>
+                )}
+                <div style={{ position: "absolute", bottom: 0, right: 0, width: 26, height: 26, borderRadius: "50%", background: COLORS.accent, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${COLORS.bg}` }}>
+                  <Camera size={12} color={COLORS.bg} />
+                </div>
+                <input id="owner-avatar-input" type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    const img = new Image();
+                    img.onload = () => {
+                      const canvas = document.createElement("canvas");
+                      const size = 200;
+                      canvas.width = size; canvas.height = size;
+                      const ctx = canvas.getContext("2d");
+                      const min = Math.min(img.width, img.height);
+                      ctx.drawImage(img, (img.width - min) / 2, (img.height - min) / 2, min, min, 0, 0, size, size);
+                      saveOwnerProfile({ avatar: canvas.toDataURL("image/jpeg", 0.7) });
+                    };
+                    img.src = reader.result;
+                  };
+                  reader.readAsDataURL(file);
+                  e.target.value = "";
+                }} />
+              </div>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>Kitchen Owner</h3>
+            </div>
+
+            {/* Kitchen Location */}
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary, margin: "0 0 10px", display: "flex", alignItems: "center", gap: 6 }}><MapPin size={13} /> Kitchen Location</p>
+              <div
+                onClick={() => setDashProfileMapOpen(true)}
+                style={{ padding: 14, background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}
+              >
+                <MapPin size={18} color={ownerProfile.kitchenAddress ? COLORS.accent : COLORS.textMuted} style={{ flexShrink: 0 }} />
+                <span style={{ flex: 1, fontSize: 14, color: ownerProfile.kitchenAddress ? COLORS.text : COLORS.textMuted, lineHeight: 1.4 }}>
+                  {ownerProfile.kitchenAddress || "Tap to set your kitchen location"}
+                </span>
+                <ChevronRight size={16} color={COLORS.textMuted} />
+              </div>
+            </div>
+
+            <FullScreenMap
+              open={dashProfileMapOpen}
+              onClose={() => setDashProfileMapOpen(false)}
+              initialLat={ownerProfile.kitchenLat}
+              initialLng={ownerProfile.kitchenLng}
+              onConfirm={(addr, lat, lng) => saveOwnerProfile({ kitchenAddress: addr, kitchenLat: lat, kitchenLng: lng })}
+            />
+
+            {/* Sound Toggle */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 0", borderBottom: `1px solid ${COLORS.border}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <Bell size={20} color={COLORS.textSecondary} />
+                <div>
+                  <p style={{ margin: 0, fontSize: 14 }}>Order Sounds</p>
+                  <p style={{ margin: "2px 0 0", fontSize: 12, color: COLORS.textMuted }}>Play sound on new orders & status changes</p>
+                </div>
+              </div>
+              <div onClick={() => { setSoundEnabled(!soundEnabled); localStorage.setItem("momoghar_sound", String(!soundEnabled)); }}
+                style={{ width: 48, height: 26, borderRadius: 13, background: soundEnabled ? COLORS.success : COLORS.border, cursor: "pointer", position: "relative", transition: "all 0.3s" }}>
+                <div style={{ width: 22, height: 22, borderRadius: "50%", background: COLORS.white, position: "absolute", top: 2, left: soundEnabled ? 24 : 2, transition: "all 0.3s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
+              </div>
+            </div>
+
+            {/* Store Open/Close */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 0", borderBottom: `1px solid ${COLORS.border}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <Home size={20} color={COLORS.textSecondary} />
+                <div>
+                  <p style={{ margin: 0, fontSize: 14 }}>Store Status</p>
+                  <p style={{ margin: "2px 0 0", fontSize: 12, color: isOpen ? COLORS.success : COLORS.danger }}>{isOpen ? "Accepting orders" : "Store is closed"}</p>
+                </div>
+              </div>
+              <div onClick={() => setIsOpen(!isOpen)}
+                style={{ width: 48, height: 26, borderRadius: 13, background: isOpen ? COLORS.success : COLORS.border, cursor: "pointer", position: "relative", transition: "all 0.3s" }}>
+                <div style={{ width: 22, height: 22, borderRadius: "50%", background: COLORS.white, position: "absolute", top: 2, left: isOpen ? 24 : 2, transition: "all 0.3s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
+              </div>
+            </div>
+
+            {/* Logout */}
+            <Button variant="danger" fullWidth style={{ marginTop: 24 }} onClick={onLogout}>Log Out</Button>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Nav */}
+      <div style={{
+        position: "fixed", bottom: 0, left: 0, right: 0, height: NAV_HEIGHT,
+        background: COLORS.surface, borderTop: `1px solid ${COLORS.border}`,
+        display: "flex", justifyContent: "space-around", alignItems: "center",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)", zIndex: 50,
+      }}>
+        {dashNavTabs.map(t => {
+          const isActive = tab === t.id;
+          return (
+            <button key={t.id} onClick={() => setTab(t.id)} style={{
+              background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "8px 16px",
+              color: isActive ? COLORS.accent : COLORS.textMuted, fontFamily: "inherit", position: "relative",
+            }}>
+              <div style={{ position: "relative" }}>
+                <t.Icon size={22} strokeWidth={isActive ? 2.2 : 1.5} />
+                {t.badge > 0 && (
+                  <span style={{
+                    position: "absolute", top: -6, right: -10,
+                    background: COLORS.danger, color: COLORS.white,
+                    fontSize: 10, fontWeight: 700, borderRadius: 10,
+                    minWidth: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center",
+                    padding: "0 4px",
+                  }}>{t.badge}</span>
+                )}
+              </div>
+              <span style={{ fontSize: 10, fontWeight: isActive ? 600 : 400 }}>{t.label}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
