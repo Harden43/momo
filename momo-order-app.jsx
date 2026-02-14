@@ -907,7 +907,7 @@ function BottomNav({ active, onNavigate, cartCount }) {
 }
 
 // --- CUSTOMER APP ---
-function CustomerApp({ user, orders, setOrders, menu }) {
+function CustomerApp({ user, orders, setOrders, menu, storeOpen }) {
   const [cart, setCart] = useState([]);
   const [activeCategory, setActiveCategory] = useState("all");
   const [screen, setScreen] = useState("menu"); // menu | cart | tracking | profile
@@ -1041,10 +1041,20 @@ function CustomerApp({ user, orders, setOrders, menu }) {
       <div style={{ padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${COLORS.border}`, position: "sticky", top: 0, background: COLORS.bg, zIndex: 10 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}><UtensilsCrossed size={20} color={COLORS.accent} strokeWidth={1.5} /> MomoGhar</h1>
-          <p style={{ margin: 0, fontSize: 12, color: COLORS.textMuted }}>Open • Delivery in ~30 min</p>
+          <p style={{ margin: 0, fontSize: 12, color: storeOpen ? COLORS.textMuted : COLORS.danger }}>{storeOpen ? "Open • Delivery in ~30 min" : "Currently Closed"}</p>
         </div>
         <Badge color={COLORS.accent} bg={COLORS.accentDim}><Star size={12} /> {user.points} pts</Badge>
       </div>
+
+      {!storeOpen && (
+        <div style={{ margin: "12px 20px", padding: "12px 16px", background: COLORS.dangerDim, border: `1px solid ${COLORS.danger}33`, borderRadius: 10, display: "flex", alignItems: "center", gap: 10 }}>
+          <Clock size={16} color={COLORS.danger} />
+          <div>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: COLORS.danger }}>Store is closed</p>
+            <p style={{ margin: "2px 0 0", fontSize: 12, color: COLORS.textMuted }}>You can browse the menu but ordering is unavailable right now</p>
+          </div>
+        </div>
+      )}
 
       {/* Categories */}
       <div className="hide-scrollbar" style={{ padding: "8px 20px", display: "flex", gap: 8, overflowX: "auto" }}>
@@ -1202,8 +1212,8 @@ function CustomerApp({ user, orders, setOrders, menu }) {
           </p>
         )}
 
-        <Button onClick={placeOrder} fullWidth size="lg" disabled={cart.length === 0 || orderLoading || !deliveryAddress} style={{ marginTop: 16, marginBottom: NAV_HEIGHT + 16 }}>
-          {orderLoading ? "Processing..." : !deliveryAddress ? <><MapPin size={16} /> Set Delivery Location</> : <><ShoppingCart size={16} /> Place Order</>}
+        <Button onClick={placeOrder} fullWidth size="lg" disabled={cart.length === 0 || orderLoading || !deliveryAddress || !storeOpen} style={{ marginTop: 16, marginBottom: NAV_HEIGHT + 16 }}>
+          {!storeOpen ? <><XCircle size={16} /> Store is Closed</> : orderLoading ? "Processing..." : !deliveryAddress ? <><MapPin size={16} /> Set Delivery Location</> : <><ShoppingCart size={16} /> Place Order</>}
         </Button>
       </div>
       <BottomNav active="cart" onNavigate={setScreen} cartCount={cartCount} />
@@ -1582,10 +1592,15 @@ function DriverNavMap({ order, onDelivered, onClose }) {
 // ============================================================
 // KITCHEN DASHBOARD
 // ============================================================
-function KitchenDashboard({ orders, setOrders, menu, setMenu, onLogout }) {
+function KitchenDashboard({ orders, setOrders, menu, setMenu, storeOpen, setStoreOpen, onLogout }) {
   const isMobile = useIsMobile();
   const [tab, setTab] = useState("orders");
-  const [isOpen, setIsOpen] = useState(true);
+
+  const toggleStoreOpen = async () => {
+    const newVal = !storeOpen;
+    setStoreOpen(newVal);
+    await supabase.from("store_settings").update({ is_open: newVal }).eq("id", 1);
+  };
   const [navOrderId, setNavOrderId] = useState(null);
   const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem("momoghar_sound") !== "false");
   const [dashProfileMapOpen, setDashProfileMapOpen] = useState(false);
@@ -1768,9 +1783,9 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onLogout }) {
       <div style={{ padding: isMobile ? "12px 16px" : "14px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, borderBottom: `1px solid ${COLORS.border}`, background: COLORS.surface }}>
         <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 14 }}>
           <h1 style={{ margin: 0, fontSize: isMobile ? 16 : 20, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}><UtensilsCrossed size={isMobile ? 16 : 20} color={COLORS.accent} strokeWidth={2} /> Kitchen</h1>
-          <div onClick={() => setIsOpen(!isOpen)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 20, background: isOpen ? COLORS.successDim : COLORS.dangerDim, border: `1px solid ${isOpen ? COLORS.success : COLORS.danger}44`, cursor: "pointer" }}>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: isOpen ? COLORS.success : COLORS.danger }} />
-            <span style={{ fontSize: 11, fontWeight: 600, color: isOpen ? COLORS.success : COLORS.danger }}>{isOpen ? "Open" : "Closed"}</span>
+          <div onClick={() => toggleStoreOpen()} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 20, background: storeOpen ? COLORS.successDim : COLORS.dangerDim, border: `1px solid ${storeOpen ? COLORS.success : COLORS.danger}44`, cursor: "pointer" }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: storeOpen ? COLORS.success : COLORS.danger }} />
+            <span style={{ fontSize: 11, fontWeight: 600, color: storeOpen ? COLORS.success : COLORS.danger }}>{storeOpen ? "Open" : "Closed"}</span>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1957,12 +1972,12 @@ function KitchenDashboard({ orders, setOrders, menu, setMenu, onLogout }) {
                 <Home size={20} color={COLORS.textSecondary} />
                 <div>
                   <p style={{ margin: 0, fontSize: 14 }}>Store Status</p>
-                  <p style={{ margin: "2px 0 0", fontSize: 12, color: isOpen ? COLORS.success : COLORS.danger }}>{isOpen ? "Accepting orders" : "Store is closed"}</p>
+                  <p style={{ margin: "2px 0 0", fontSize: 12, color: storeOpen ? COLORS.success : COLORS.danger }}>{storeOpen ? "Accepting orders" : "Store is closed"}</p>
                 </div>
               </div>
-              <div onClick={() => setIsOpen(!isOpen)}
-                style={{ width: 48, height: 26, borderRadius: 13, background: isOpen ? COLORS.success : COLORS.border, cursor: "pointer", position: "relative", transition: "all 0.3s" }}>
-                <div style={{ width: 22, height: 22, borderRadius: "50%", background: COLORS.white, position: "absolute", top: 2, left: isOpen ? 24 : 2, transition: "all 0.3s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
+              <div onClick={() => toggleStoreOpen()}
+                style={{ width: 48, height: 26, borderRadius: 13, background: storeOpen ? COLORS.success : COLORS.border, cursor: "pointer", position: "relative", transition: "all 0.3s" }}>
+                <div style={{ width: 22, height: 22, borderRadius: "50%", background: COLORS.white, position: "absolute", top: 2, left: storeOpen ? 24 : 2, transition: "all 0.3s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
               </div>
             </div>
 
@@ -2056,6 +2071,7 @@ export default function App() {
   const [dashboardAuthed, setDashboardAuthed] = useState(() => sessionStorage.getItem("dashboard_auth") === "true");
   const [orders, setOrders] = useState([]);
   const [menu, setMenu] = useState([]);
+  const [storeOpen, setStoreOpen] = useState(true);
 
   // Listen for hash changes
   useEffect(() => {
@@ -2070,6 +2086,17 @@ export default function App() {
     const saved = localStorage.getItem("momoghar_user");
     if (saved) setUser(JSON.parse(saved));
   }, [isDashboard]);
+
+  // Load store status + poll
+  useEffect(() => {
+    const fetchStatus = async () => {
+      const { data } = await supabase.from("store_settings").select("is_open").eq("id", 1).single();
+      if (data) setStoreOpen(data.is_open);
+    };
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Load menu from DB
   useEffect(() => {
@@ -2156,6 +2183,8 @@ export default function App() {
         setOrders={setOrders}
         menu={menu}
         setMenu={setMenu}
+        storeOpen={storeOpen}
+        setStoreOpen={setStoreOpen}
         onLogout={() => {
           sessionStorage.removeItem("dashboard_auth");
           setDashboardAuthed(false);
@@ -2169,5 +2198,5 @@ export default function App() {
     return <AuthView onLogin={(userData) => setUser(userData)} />;
   }
 
-  return <CustomerApp user={user} orders={orders} setOrders={setOrders} menu={menu} />;
+  return <CustomerApp user={user} orders={orders} setOrders={setOrders} menu={menu} storeOpen={storeOpen} />;
 }
