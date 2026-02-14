@@ -371,7 +371,7 @@ function FullScreenMap({ open, onClose, initialLat, initialLng, onConfirm }) {
   const searchAddress = async (q) => {
     if (q.length < 3) { setResults([]); return; }
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5&addressdetails=1`);
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5&addressdetails=1&countrycodes=ca`);
       const data = await res.json();
       setResults(data);
     } catch (err) {
@@ -944,8 +944,8 @@ function CustomerApp({ user, orders, setOrders, menu, onSwitchView }) {
           </p>
         )}
 
-        <Button onClick={placeOrder} fullWidth size="lg" disabled={cart.length === 0 || orderLoading} style={{ marginTop: 16, marginBottom: NAV_HEIGHT + 16 }}>
-          {orderLoading ? "Processing..." : <><ShoppingCart size={16} /> Place Order</>}
+        <Button onClick={placeOrder} fullWidth size="lg" disabled={cart.length === 0 || orderLoading || !deliveryAddress} style={{ marginTop: 16, marginBottom: NAV_HEIGHT + 16 }}>
+          {orderLoading ? "Processing..." : !deliveryAddress ? <><MapPin size={16} /> Set Delivery Location</> : <><ShoppingCart size={16} /> Place Order</>}
         </Button>
       </div>
       <BottomNav active="cart" onNavigate={setScreen} cartCount={cartCount} />
